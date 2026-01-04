@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>HEMA Training Calendar - {{ month_name }} {{ year }}</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Header and navigation */
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .month-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .month-nav h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            background-color: #34495e;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .nav-arrow:hover {
+            background-color: #4a6278;
+        }
+
+        .nav-arrow:active {
+            background-color: #1a252f;
+        }
+
+        /* Calendar container */
+        .calendar-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Calendar grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: #ddd;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Weekday headers */
+        .weekday {
+            background-color: #34495e;
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Day cells */
+        .day-cell {
+            background-color: white;
+            min-height: 100px;
+            padding: 0.5rem;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .day-cell:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Different month styling */
+        .day-cell:not(.current-month) {
+            background-color: #f0f0f0;
+            opacity: 0.6;
+        }
+
+        .day-cell:not(.current-month):hover {
+            background-color: #e8e8e8;
+        }
+
+        /* Today highlight */
+        .day-cell.today {
+            background-color: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+
+        .day-cell.today:hover {
+            background-color: #d1e7fd;
+        }
+
+        /* Day number */
+        .day-number {
+            display: block;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+            color: #555;
+        }
+
+        .day-cell.today .day-number {
+            color: #2196f3;
+            font-size: 1rem;
+        }
+
+        /* Events list */
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        /* Event item */
+        .event {
+            background-color: #4caf50;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            min-height: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .event:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .event:active {
+            transform: translateY(0);
+        }
+
+        .event-time {
+            font-weight: 600;
+            display: block;
+        }
+
+        .event-name {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Modal dialog */
+        dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            border: none;
+            border-radius: 8px;
+            padding: 0;
+            max-width: 90%;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        dialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 44px;
+            height: 44px;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        #event-details h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        #event-details p {
+            margin-bottom: 0.5rem;
+        }
+
+        #event-details strong {
+            color: #555;
+        }
+
+        /* Responsive design */
+        @media (max-width: 640px) {
+            .month-nav h1 {
+                font-size: 1.25rem;
+            }
+
+            .calendar-container {
+                margin: 1rem auto;
+            }
+
+            .day-cell {
+                min-height: 80px;
+                padding: 0.25rem;
+            }
+
+            .weekday {
+                font-size: 0.75rem;
+                padding: 0.5rem;
+            }
+
+            .day-number {
+                font-size: 0.75rem;
+            }
+
+            .event {
+                font-size: 0.625rem;
+                padding: 0.25rem;
+                min-height: 36px;
+            }
+
+            /* Stack weekday names on very small screens */
+            .weekday-full {
+                display: none;
+            }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+            .calendar-container {
+                margin: 1.5rem auto;
+            }
+
+            .day-cell {
+                min-height: 120px;
+            }
+        }
+
+        @media (min-width: 1025px) {
+            .day-cell {
+                min-height: 140px;
+            }
+
+            .event {
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        /* Error state */
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="month-nav">
+            <a href="/calendar/{{ prev_year }}/{{ prev_month }}" class="nav-arrow" aria-label="Previous month">←</a>
+            <h1>{{ month_name }} {{ year }}</h1>
+            <a href="/calendar/{{ next_year }}/{{ next_month }}" class="nav-arrow" aria-label="Next month">→</a>
+        </nav>
+    </header>
+
+    <main class="calendar-container">
+        <div class="calendar-grid">
+            <!-- Weekday headers -->
+            <div class="weekday">Mon</div>
+            <div class="weekday">Tue</div>
+            <div class="weekday">Wed</div>
+            <div class="weekday">Thu</div>
+            <div class="weekday">Fri</div>
+            <div class="weekday">Sat</div>
+            <div class="weekday">Sun</div>
+
+            <!-- Day cells (42 total for 6-week grid) -->
+            {% for day in days %}
+            <div class="day-cell {% if day.is_today %}today{% endif %} {% if day.is_current_month %}current-month{% endif %}">
+                <span class="day-number">{{ day.date.day }}</span>
+                {% if day.events %}
+                <div class="events-list">
+                    {% for event in day.events %}
+                    <div class="event" data-event-id="{{ event.id }}" onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', {{ event.trainer_id }})">
+                        <span class="event-time">{{ event.start.strftime('%H:%M') }} - {{ event.end.strftime('%H:%M') }}</span>
+                        <span class="event-name">{{ event.name }}</span>
+                        <span class="event-trainer-name">{{ event.trainer_name }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Event details modal -->
+    <dialog id="event-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeEventModal()" aria-label="Close">&times;</button>
+            <div id="event-details"></div>
+        </div>
+    </dialog>
+
+    <script>
+        // Event modal functionality (progressive enhancement)
+        function showEventDetails(eventId, eventName, startTime, endTime, trainerId) {
+            const modal = document.getElementById('event-modal');
+            const detailsDiv = document.getElementById('event-details');
+
+            // Format the details
+            detailsDiv.innerHTML = `
+                <h2>${eventName}</h2>
+                <p><strong>Start:</strong> ${startTime}</p>
+                <p><strong>End:</strong> ${endTime}</p>
+                <p><strong>Trainer ID:</strong> ${trainerId}</p>
+            `;
+
+            modal.showModal();
+        }
+
+        function closeEventModal() {
+            const modal = document.getElementById('event-modal');
+            modal.close();
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('event-modal').addEventListener('click', function(event) {
+            const modal = document.getElementById('event-modal');
+            const rect = modal.getBoundingClientRect();
+            const isInDialog = (
+                rect.top <= event.clientY &&
+                event.clientY <= rect.top + rect.height &&
+                rect.left <= event.clientX &&
+                event.clientX <= rect.left + rect.width
+            );
+            if (!isInDialog) {
+                modal.close();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeEventModal();
+            }
+        });
+    </script>
+</body>
+</html>
