@@ -24,7 +24,7 @@
             background-color: #2c3e50;
             color: white;
             padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .month-nav {
@@ -60,6 +60,26 @@
 
         .nav-arrow:active {
             background-color: #1a252f;
+        }
+
+        .logout-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: #e74c3c;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .logout-btn:active {
+            background-color: #a93226;
         }
 
         /* Calendar container */
@@ -193,7 +213,7 @@
             width: 500px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         dialog::backdrop {
@@ -312,113 +332,122 @@
     </style>
 </head>
 <body>
-    <header>
-        <nav class="month-nav">
-            <a href="/calendar/{{ prev_date.year }}/{{ prev_date.month }}" class="nav-arrow" aria-label="Previous month">←</a>
-            <h1 id="month-title" data-month="{{ date.month }}" data-year="{{ date.year }}"></h1>
-            <a href="/calendar/{{ next_date.year }}/{{ next_date.month }}" class="nav-arrow" aria-label="Next month">→</a>
-        </nav>
-    </header>
+<header>
+    <nav class="month-nav">
+        <a href="/calendar/{{ prev_date.year }}/{{ prev_date.month }}" class="nav-arrow"
+           aria-label="Previous month">←</a>
+        <h1 id="month-title" data-month="{{ date.month }}" data-year="{{ date.year }}"></h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="/calendar/{{ next_date.year }}/{{ next_date.month }}" class="nav-arrow"
+               aria-label="Next month">→</a>
+            <a class="logout-btn" id="logout-btn">Logout</a>
+        </div>
+    </nav>
+</header>
 
-    <main class="calendar-container">
-        <div class="calendar-grid">
-            <!-- Weekday headers -->
-            <div class="weekday">Mon</div>
-            <div class="weekday">Tue</div>
-            <div class="weekday">Wed</div>
-            <div class="weekday">Thu</div>
-            <div class="weekday">Fri</div>
-            <div class="weekday">Sat</div>
-            <div class="weekday">Sun</div>
+<main class="calendar-container">
+    <div class="calendar-grid">
+        <!-- Weekday headers -->
+        <div class="weekday">Mon</div>
+        <div class="weekday">Tue</div>
+        <div class="weekday">Wed</div>
+        <div class="weekday">Thu</div>
+        <div class="weekday">Fri</div>
+        <div class="weekday">Sat</div>
+        <div class="weekday">Sun</div>
 
-            <!-- Day cells (42 total for 6-week grid) -->
-            {% for day in days %}
+        <!-- Day cells (42 total for 6-week grid) -->
+        {% for day in days %}
             <div class="day-cell {% if day.is_today %}today{% endif %} {% if day.is_current_month %}current-month{% endif %}">
                 <span class="day-number">{{ day.date.day }}</span>
                 {% if day.events %}
-                <div class="events-list">
-                    {% for event in day.events %}
-                    <div class="event" data-event-id="{{ event.id }}" style="background-color: #{{ event.color }};" onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', '{{ event.trainer_name }}', '{{ event.color }}')">
-                        <span class="event-time">{{ event.start.strftime('%H:%M') }} - {{ event.end.strftime('%H:%M') }}</span>
-                        <span class="event-name">{{ event.name }}</span>
-                        <span class="event-trainer-name">{{ event.trainer_name }}</span>
+                    <div class="events-list">
+                        {% for event in day.events %}
+                            <div class="event" data-event-id="{{ event.id }}"
+                                 style="background-color: #{{ event.color }};"
+                                 onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', '{{ event.trainer_name }}', '{{ event.color }}')">
+                                <span class="event-time">{{ event.start.strftime('%H:%M') }} - {{ event.end.strftime('%H:%M') }}</span>
+                                <span class="event-name">{{ event.name }}</span>
+                                <span class="event-trainer-name">{{ event.trainer_name }}</span>
+                            </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
                 {% endif %}
             </div>
-            {% endfor %}
-        </div>
-    </main>
+        {% endfor %}
+    </div>
+</main>
 
-    <!-- Event details modal -->
-    <dialog id="event-modal">
-        <div class="modal-content">
-            <button class="close-modal" onclick="closeEventModal()" aria-label="Close">&times;</button>
-            <div id="event-details"></div>
-        </div>
-    </dialog>
+<!-- Event details modal -->
+<dialog id="event-modal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeEventModal()" aria-label="Close">&times;</button>
+        <div id="event-details"></div>
+    </div>
+</dialog>
 
-    <script>
-        // Set month title from JavaScript
-        (function() {
-            const monthNames = [
-                'January', 'February', 'March', 'April', 'May', 'June',
-                'July', 'August', 'September', 'October', 'November', 'December'
-            ];
+<script>
+    // Set month title from JavaScript
+    (function () {
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
 
-            const monthTitle = document.getElementById('month-title');
-            const month = parseInt(monthTitle.dataset.month);
-            const year = parseInt(monthTitle.dataset.year);
+        const monthTitle = document.getElementById('month-title');
+        const month = parseInt(monthTitle.dataset.month);
+        const year = parseInt(monthTitle.dataset.year);
 
-            monthTitle.textContent = `${monthNames[month - 1]} ${year}`;
+        monthTitle.textContent = `${monthNames[month - 1]} ${year}`;
 
-            // Also update page title
-            document.title = `HEMA Training Calendar - ${monthNames[month - 1]} ${year}`;
-        })();
+        // Also update page title
+        document.title = `HEMA Training Calendar - ${monthNames[month - 1]} ${year}`;
+    })();
 
-        // Event modal functionality (progressive enhancement)
-        function showEventDetails(eventId, eventName, startTime, endTime, trainerName, eventColor) {
-            const modal = document.getElementById('event-modal');
-            const detailsDiv = document.getElementById('event-details');
+    // Event modal functionality (progressive enhancement)
+    function showEventDetails(eventId, eventName, startTime, endTime, trainerName, eventColor) {
+        const modal = document.getElementById('event-modal');
+        const detailsDiv = document.getElementById('event-details');
 
-            // Format the details
-            detailsDiv.innerHTML = `
+        // Format the details
+        detailsDiv.innerHTML = `
                 <h2>${eventName}</h2>
                 <p><strong>Start:</strong> ${startTime}</p>
                 <p><strong>End:</strong> ${endTime}</p>
                 <p><strong>Trainer:</strong> ${trainerName}</p>
             `;
 
-            modal.showModal();
-        }
+        modal.showModal();
+    }
 
-        function closeEventModal() {
-            const modal = document.getElementById('event-modal');
+    function closeEventModal() {
+        const modal = document.getElementById('event-modal');
+        modal.close();
+    }
+
+    document.getElementById('logout-btn').href = '//log:out@' + window.location.host + '/calendar/';
+
+    // Close modal on backdrop click
+    document.getElementById('event-modal').addEventListener('click', function (event) {
+        const modal = document.getElementById('event-modal');
+        const rect = modal.getBoundingClientRect();
+        const isInDialog = (
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width
+        );
+        if (!isInDialog) {
             modal.close();
         }
+    });
 
-        // Close modal on backdrop click
-        document.getElementById('event-modal').addEventListener('click', function(event) {
-            const modal = document.getElementById('event-modal');
-            const rect = modal.getBoundingClientRect();
-            const isInDialog = (
-                rect.top <= event.clientY &&
-                event.clientY <= rect.top + rect.height &&
-                rect.left <= event.clientX &&
-                event.clientX <= rect.left + rect.width
-            );
-            if (!isInDialog) {
-                modal.close();
-            }
-        });
-
-        // Close modal on Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeEventModal();
-            }
-        });
-    </script>
+    // Close modal on Escape key
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeEventModal();
+        }
+    });
+</script>
 </body>
 </html>
