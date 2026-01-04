@@ -38,6 +38,12 @@
         .month-nav h1 {
             font-size: 1.5rem;
             font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .month-nav h1:hover {
+            color: #ecf0f1;
         }
 
         .nav-arrow {
@@ -336,7 +342,7 @@
     <nav class="month-nav">
         <a href="/calendar/{{ prev_date.year }}/{{ prev_date.month }}" class="nav-arrow"
            aria-label="Previous month">←</a>
-        <h1 id="month-title" data-month="{{ date.month }}" data-year="{{ date.year }}"></h1>
+        <h1 id="month-title" data-month="{{ date.month }}" data-year="{{ date.year }}" onclick="window.location.href='/calendar'"></h1>
         <div style="display: flex; align-items: center; gap: 1rem;">
             <a href="/calendar/{{ next_date.year }}/{{ next_date.month }}" class="nav-arrow"
                aria-label="Next month">→</a>
