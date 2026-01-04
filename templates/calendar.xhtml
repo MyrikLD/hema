@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>HEMA Training Calendar - {{ month_name }} {{ year }}</title>
+    <title>HEMA Training Calendar</title>
     <style>
         /* Reset and base styles */
         * {
@@ -315,9 +315,9 @@
 <body>
     <header>
         <nav class="month-nav">
-            <a href="/calendar/{{ prev_year }}/{{ prev_month }}" class="nav-arrow" aria-label="Previous month">←</a>
-            <h1>{{ month_name }} {{ year }}</h1>
-            <a href="/calendar/{{ next_year }}/{{ next_month }}" class="nav-arrow" aria-label="Next month">→</a>
+            <a href="/calendar/{{ prev_date.year }}/{{ prev_date.month }}" class="nav-arrow" aria-label="Previous month">←</a>
+            <h1 id="month-title" data-month="{{ date.month }}" data-year="{{ date.year }}"></h1>
+            <a href="/calendar/{{ next_date.year }}/{{ next_date.month }}" class="nav-arrow" aria-label="Next month">→</a>
         </nav>
     </header>
 
@@ -339,7 +339,7 @@
                 {% if day.events %}
                 <div class="events-list">
                     {% for event in day.events %}
-                    <div class="event" data-event-id="{{ event.id }}" onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', {{ event.trainer_id }})">
+                    <div class="event" data-event-id="{{ event.id }}" onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', '{{ event.trainer_name }}')">
                         <span class="event-time">{{ event.start.strftime('%H:%M') }} - {{ event.end.strftime('%H:%M') }}</span>
                         <span class="event-name">{{ event.name }}</span>
                         <span class="event-trainer-name">{{ event.trainer_name }}</span>
@@ -361,8 +361,25 @@
     </dialog>
 
     <script>
+        // Set month title from JavaScript
+        (function() {
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            const monthTitle = document.getElementById('month-title');
+            const month = parseInt(monthTitle.dataset.month);
+            const year = parseInt(monthTitle.dataset.year);
+
+            monthTitle.textContent = `${monthNames[month - 1]} ${year}`;
+
+            // Also update page title
+            document.title = `HEMA Training Calendar - ${monthNames[month - 1]} ${year}`;
+        })();
+
         // Event modal functionality (progressive enhancement)
-        function showEventDetails(eventId, eventName, startTime, endTime, trainerId) {
+        function showEventDetails(eventId, eventName, startTime, endTime, trainerName) {
             const modal = document.getElementById('event-modal');
             const detailsDiv = document.getElementById('event-details');
 
@@ -371,7 +388,7 @@
                 <h2>${eventName}</h2>
                 <p><strong>Start:</strong> ${startTime}</p>
                 <p><strong>End:</strong> ${endTime}</p>
-                <p><strong>Trainer ID:</strong> ${trainerId}</p>
+                <p><strong>Trainer:</strong> ${trainerName}</p>
             `;
 
             modal.showModal();

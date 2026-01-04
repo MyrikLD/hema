@@ -1,13 +1,15 @@
 """Calendar service for building monthly calendar views."""
 
-from calendar import month_name, monthrange
+from calendar import monthrange
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.models.events import EventModel
-from hema.schemas.calendar import CalendarDay
+from hema.models.users import UserModel
+from hema.schemas.calendar import CalendarDay, CalendarMonth
 from hema.schemas.events import EventResponse
 
 
@@ -15,21 +17,19 @@ class CalendarService:
     """Service for generating calendar data."""
 
     @staticmethod
-    async def get_month_data(db: AsyncSession, year: int, month: int) -> dict:
+    async def get_month_data(db: AsyncSession, month_date: date) -> CalendarMonth:
         """
         Build calendar data structure for template rendering.
 
         Args:
             db: Database session
-            year: Year (e.g., 2026)
-            month: Month (1-12)
+            month_date: Date object representing the month (day will be ignored, only year and month used)
 
         Returns:
-            Dictionary with calendar data ready for Jinja2 template
+            CalendarMonth schema with all calendar data for Jinja2 template
         """
-        # Validate month
-        if not (1 <= month <= 12):
-            raise ValueError(f"Invalid month: {month}. Must be 1-12.")
+        year = month_date.year
+        month = month_date.month
 
         # Get first and last day of the month
         first_day = date(year, month, 1)
@@ -45,24 +45,31 @@ class CalendarService:
         grid_end = grid_start + timedelta(days=41)
 
         # Query events in the visible range (including adjacent month days)
+        # Join with users to get trainer name
         q = (
-            sa.select(EventModel)
+            sa.select(
+                EventModel.id,
+                EventModel.name,
+                EventModel.start,
+                EventModel.end,
+                EventModel.trainer_id,
+                UserModel.name.label("trainer_name"),
+            )
+            .join(UserModel, EventModel.trainer_id == UserModel.id)
             .where(
                 EventModel.start >= datetime.combine(grid_start, datetime.min.time())
             )
             .where(EventModel.start <= datetime.combine(grid_end, datetime.max.time()))
-            .order_by(EventModel.start)
+            .order_by(EventModel.start, EventModel.id)
         )
-        result = await db.execute(q)
-        events = result.scalars().all()
+        rows = (await db.execute(q)).all()
 
         # Group events by date
-        events_by_date: dict[date, list[EventResponse]] = {}
-        for event in events:
-            event_date = event.start.date()
-            if event_date not in events_by_date:
-                events_by_date[event_date] = []
-            events_by_date[event_date].append(EventResponse.model_validate(event))
+        events_by_date: dict[date, list[EventResponse]] = defaultdict(list)
+        for event in rows:
+            # Create EventResponse with trainer_name
+            event_response = EventResponse.model_validate(event)
+            events_by_date[event.start.date()].append(event_response)
 
         # Build 42-day grid
         today = date.today()
@@ -91,14 +98,10 @@ class CalendarService:
         else:
             next_year, next_month = year, month + 1
 
-        # Return data structure for template
-        return {
-            "year": year,
-            "month": month,
-            "month_name": month_name[month],
-            "days": days,
-            "prev_year": prev_year,
-            "prev_month": prev_month,
-            "next_year": next_year,
-            "next_month": next_month,
-        }
+        # Return validated schema for template
+        return CalendarMonth(
+            date=date(year, month, 1),
+            days=days,
+            prev_date=date(prev_year, prev_month, 1),
+            next_date=date(next_year, next_month, 1),
+        )
