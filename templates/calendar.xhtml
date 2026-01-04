@@ -146,13 +146,12 @@
 
         /* Event item */
         .event {
-            background-color: #4caf50;
             color: white;
             padding: 0.25rem 0.5rem;
             border-radius: 4px;
             font-size: 0.75rem;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: filter 0.2s, transform 0.1s;
             min-height: 44px;
             display: flex;
             flex-direction: column;
@@ -160,7 +159,7 @@
         }
 
         .event:hover {
-            background-color: #45a049;
+            filter: brightness(0.9);
             transform: translateY(-1px);
         }
 
@@ -339,7 +338,7 @@
                 {% if day.events %}
                 <div class="events-list">
                     {% for event in day.events %}
-                    <div class="event" data-event-id="{{ event.id }}" onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', '{{ event.trainer_name }}')">
+                    <div class="event" data-event-id="{{ event.id }}" style="background-color: #{{ event.color }};" onclick="showEventDetails({{ event.id }}, '{{ event.name }}', '{{ event.start.strftime('%Y-%m-%d %H:%M') }}', '{{ event.end.strftime('%Y-%m-%d %H:%M') }}', '{{ event.trainer_name }}', '{{ event.color }}')">
                         <span class="event-time">{{ event.start.strftime('%H:%M') }} - {{ event.end.strftime('%H:%M') }}</span>
                         <span class="event-name">{{ event.name }}</span>
                         <span class="event-trainer-name">{{ event.trainer_name }}</span>
@@ -379,7 +378,7 @@
         })();
 
         // Event modal functionality (progressive enhancement)
-        function showEventDetails(eventId, eventName, startTime, endTime, trainerName) {
+        function showEventDetails(eventId, eventName, startTime, endTime, trainerName, eventColor) {
             const modal = document.getElementById('event-modal');
             const detailsDiv = document.getElementById('event-details');
 

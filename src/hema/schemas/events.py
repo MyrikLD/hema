@@ -11,6 +11,7 @@ class EventBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     name: str
+    color: str = "4CAF50"
     start: datetime
     end: datetime
     trainer_id: int

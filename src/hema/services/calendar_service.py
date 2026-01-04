@@ -50,6 +50,7 @@ class CalendarService:
             sa.select(
                 EventModel.id,
                 EventModel.name,
+                EventModel.color,
                 EventModel.start,
                 EventModel.end,
                 EventModel.trainer_id,

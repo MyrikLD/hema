@@ -35,6 +35,7 @@ async def list_events(
         select(
             EventModel.id,
             EventModel.name,
+            EventModel.color,
             EventModel.start,
             EventModel.end,
             EventModel.trainer_id,
@@ -75,6 +76,7 @@ async def get_event(
         select(
             EventModel.id,
             EventModel.name,
+            EventModel.color,
             EventModel.start,
             EventModel.end,
             EventModel.trainer_id,
