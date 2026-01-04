@@ -21,13 +21,18 @@ source .venv/bin/activate
 
 ### Running the Application
 ```bash
-# Run development server
-python main.py
+# Run development server (set PYTHONPATH to src directory)
+cd /home/myrik/work/my/hema
+PYTHONPATH=/home/myrik/work/my/hema/src python src/hema/main.py
 # or
-uvicorn main:api --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=/home/myrik/work/my/hema/src uvicorn hema.main:api --reload --host 0.0.0.0 --port 8000
 
 # Health check
 curl http://localhost:8000/health
+
+# Access calendar (requires HTTP Basic Auth)
+# Browser will prompt for username/password
+open http://localhost:8000/calendar
 ```
 
 ### Testing
@@ -70,31 +75,61 @@ black main.py models/
 hema/
 ├── main.py              # FastAPI application entry point
 ├── config.py            # Pydantic settings (database, app config)
+├── auth.py              # HTTP Basic Auth implementation
+├── db.py                # Database connection and session management
 ├── models/              # SQLAlchemy models
 │   ├── base.py         # Base declarative class with shared metadata
 │   ├── users.py        # UserModel (users)
 │   ├── events.py       # EventModel (training sessions)
-│   └── visits.py       # VisitModel (attendance records)
+│   ├── visits.py       # VisitModel (attendance records)
+│   ├── intentions.py   # IntentionModel (planned attendance)
+│   └── weekly_events.py # WeeklyEventModel (recurring event templates)
+├── schemas/             # Pydantic schemas for API validation
+│   ├── events.py       # EventBase, EventResponse
+│   ├── calendar.py     # CalendarDay, CalendarMonth
+│   └── weekly_events.py # WeeklyEventCreate, WeeklyEventUpdate, WeeklyEventResponse
+├── routers/             # API route handlers
+│   ├── calendar.py     # Calendar view routes
+│   ├── events.py       # Event CRUD endpoints
+│   └── weekly_events.py # WeeklyEvent CRUD endpoints
+├── services/            # Business logic layer
+│   ├── calendar_service.py # Calendar data generation
+│   └── weekly_event_service.py # Recurring event management
 └── templates/           # Jinja2 templates for frontend
-    └── calendar.xhtml  # Calendar view
+    └── calendar.xhtml  # Monthly calendar view (responsive)
 ```
 
 ### Data Model Relationships
 
-**Critical Architecture Detail:** The system has a three-entity model with foreign key relationships:
+**Critical Architecture Detail:** The system uses the following data model:
 
 1. **Users** - users with RFID badges
+   - Fields: id, name, password, rfid_uid, role, is_active, created_at
    - Roles: `user`, `trainer`, `admin`
    - RFID UID links physical badge to user account
 
-2. **Events** - training sessions with assigned trainer
-   - `trainer_id` → `Users.id` (FK)
-   - Time: `start` and `end` to determine active sessions
+2. **Events** - individual training sessions
+   - Fields: id, name, color (6-char hex), start, end, trainer_id, weekly_id
+   - `trainer_id` → `Users.id` (FK) - assigned trainer
+   - `weekly_id` → `WeeklyEvents.id` (FK, nullable) - link to recurring event template
+   - Color stored as 6-character hex (e.g., "4CAF50")
 
-3. **Visits** - attendance records (links users and events)
+3. **WeeklyEvents** - recurring event templates (trainer abstraction)
+   - Fields: id, name, color, start (date), end (date), event_start (datetime), event_end (datetime), trainer_id
+   - Generates Event records for each matching weekday in date range
+   - Weekday determined from `event_start.weekday()`
+   - When created: generates Events for all matching dates
+   - When updated (date range): deletes future Events and regenerates
+   - When deleted: sets `weekly_id=NULL` for future Events (doesn't cascade delete)
+
+4. **Visits** - attendance records (links users and events)
    - `user_id` → `Users.id` (FK)
-   - `event_id` → `Events.id` (FK) ⚠️ **NOT IMPLEMENTED in models/visits.py**
-   - Created when RFID is scanned during an active training session
+   - `event_id` → `Events.id` (FK) - ⚠️ **May be NULL during RFID scan**
+   - Created when RFID is scanned; event association computed post-processing
+
+5. **Intentions** - planned attendance (user declares intent to attend)
+   - `user_id` → `Users.id` (FK)
+   - `event_id` → `Events.id` (FK)
 
 ### RFID Check-in Flow
 
@@ -112,38 +147,143 @@ hema/
 - Event association computed later (not during scan)
 - Simpler ESP32 logic (no event lookup required)
 
-### Models Pattern
+### Architecture Patterns
 
-All models inherit from `models.base.Base` (SQLAlchemy DeclarativeBase) with shared `metadata` object for migrations.
+**Layered Architecture:**
 
-**Important:** When adding new fields to models:
-- Use SQLAlchemy 2.0 syntax (`sa.Column`)
-- Add proper constraints (unique, nullable, default)
-- Update relationships for navigation between tables
+1. **Models Layer** (`models/`)
+   - SQLAlchemy ORM models
+   - All inherit from `models.base.Base` (DeclarativeBase)
+   - Shared `metadata` object for Alembic migrations
+   - Use SQLAlchemy 2.0 syntax (`sa.Column`)
+
+2. **Schemas Layer** (`schemas/`)
+   - Pydantic models for validation
+   - Use `ConfigDict(from_attributes=True)` for ORM compatibility
+   - Separate schemas for Create/Update/Response operations
+   - Example: EventBase → EventResponse (adds id, trainer_name)
+
+3. **Services Layer** (`services/`)
+   - Business logic encapsulation
+   - Database queries and data transformations
+   - Instance methods with `__init__(self, db: AsyncSession)` pattern
+   - Return dicts or ORM objects depending on use case
+
+4. **Routers Layer** (`routers/`)
+   - FastAPI route handlers
+   - Dependency injection: `Depends(db.get_db)`, `Depends(security)`
+   - Minimal logic - delegates to Services
+   - Response models via Pydantic schemas
+
+**Conventions:**
+- Routers use `session` parameter name for AsyncSession
+- Services use `self.db` for database operations
+- All database operations are async (`await`)
+- SQL queries use SQLAlchemy 2.0 style (select, insert, update, delete)
+- Bulk operations prefer `sa.insert().values(items)` over ORM loops
+
+### WeeklyEvent Implementation Pattern
+
+**Recurring Events System:**
+
+WeeklyEvent acts as a template that generates multiple Event instances:
+
+1. **Creation Flow:**
+   - Trainer creates WeeklyEvent with date range (start, end) and time template (event_start, event_end)
+   - System extracts weekday from `event_start.weekday()` (0=Monday, 6=Sunday)
+   - Generates Event for each matching weekday in range
+   - Events only created from `max(start, today)` onwards (skips past dates)
+   - Each Event gets `weekly_id` pointing to WeeklyEvent template
+
+2. **Update Flow:**
+   - If `start/end/event_start` changed → deletes future Events, regenerates new ones
+   - If only `name/color/trainer_id` changed → updates all future Events in-place
+   - Past Events never modified (preserves history)
+
+3. **Delete Flow:**
+   - Sets `weekly_id=NULL` for all future Events (unlinks but preserves)
+   - Deletes WeeklyEvent record
+   - Past Events remain untouched
+
+4. **Implementation Details:**
+   - WeeklyEventService uses instance methods (initialized with `db: AsyncSession`)
+   - Bulk inserts via `sa.insert(EventModel).values(items)` for performance
+   - Returns dicts instead of ORM objects for faster serialization
+   - Only operates on future Events (`EventModel.start > datetime.now()`)
+
+### Implemented Features
+
+**✅ Completed:**
+
+1. **Authentication** - HTTP Basic Auth (username/password)
+   - `HTTPBasicAuth` class in `auth.py`
+   - Logout via credential clearing
+
+2. **Calendar System** - Monthly calendar view
+   - 42-day grid (6 weeks × 7 days)
+   - Responsive design (mobile-first CSS Grid)
+   - Navigation: prev/next month, click title to return to current month
+   - Events displayed with custom colors
+   - Modal for event details
+
+3. **Event Management**
+   - GET `/api/events` - List events with pagination
+   - GET `/api/events/{id}` - Get single event
+   - EventResponse includes `trainer_name` via SQL JOIN
+
+4. **WeeklyEvent System** (Recurring Events)
+   - Full CRUD: POST/GET/PUT/DELETE `/api/weekly`
+   - Automatic Event generation for matching weekdays
+   - Smart updates: regenerates Events when date range changes
+   - Only future Events updated/deleted (preserves history)
+
+5. **Pydantic Schemas** - Full validation layer
+   - EventBase, EventResponse
+   - CalendarDay, CalendarMonth
+   - WeeklyEventCreate, WeeklyEventUpdate, WeeklyEventResponse
+
+6. **Services Layer**
+   - `CalendarService.get_month_data()` - Calendar data generation
+   - `WeeklyEventService` - Recurring event management
 
 ### Missing Implementation
 
-**TODO Items in current codebase:**
+**⚠️ TODO Items:**
 
-1. **models/visits.py** - missing `event_id` foreign key
-2. **models/users.py** - incomplete model (only id), needs:
-   - name, email, phone, rfid_uid, role, is_active, created_at
-3. **models/events.py** - incomplete, needs:
-   - description, max_participants, is_active, created_at
-4. **Relationships** - SQLAlchemy relationships not configured between models
-5. **config.py** - empty, needs database URL and app settings
-6. **Database connection** - SQLAlchemy engine/session not initialized
+1. **RFID Check-in Endpoint** - `POST /api/checkin` not yet implemented
+2. **Visits Management** - No API endpoints for attendance records
+3. **User Management** - No CRUD endpoints for users
+4. **Intentions** - No API for planned attendance
+5. **Event Details Modal** - JavaScript for event modal not implemented
+6. **Admin UI** - No separate trainer/admin interface for WeeklyEvents
 
 ## API Design Patterns
 
-### Endpoints Structure (to be implemented)
+### Implemented Endpoints
 
 API follows RESTful pattern with resource grouping:
-- `/api/auth/*` - authentication
+
+**Calendar Views (HTML):**
+- `GET /calendar` - Current month calendar (requires HTTP Basic Auth)
+- `GET /calendar/{year}/{month}` - Specific month calendar
+
+**Events API (JSON):**
+- `GET /api/events` - List all events (with pagination: skip, limit)
+- `GET /api/events/{id}` - Get single event details
+
+**WeeklyEvents API (JSON, Trainer-only):**
+- `GET /api/weekly` - List recurring event templates
+- `GET /api/weekly/{id}` - Get single template
+- `POST /api/weekly` - Create recurring event (generates Events)
+- `PUT /api/weekly/{id}` - Update template (regenerates future Events if needed)
+- `DELETE /api/weekly/{id}` - Delete template (preserves past Events)
+
+### TODO Endpoints
+
+- `/api/auth/*` - authentication (currently using HTTP Basic Auth)
 - `/api/users/*` - user CRUD operations
-- `/api/events/*` - training sessions CRUD
 - `/api/visits/*` - attendance records
-- `/api/calendar/{year}/{month}` - calendar data
+- `/api/intentions/*` - planned attendance
 - `/api/checkin` - **special endpoint for ESP32**
 
 ### RFID Endpoint Requirements
@@ -161,20 +301,26 @@ API follows RESTful pattern with resource grouping:
 
 **Server-Side Rendering** with Jinja2 for main pages, minimal JavaScript for interactivity.
 
-### Calendar View Requirements
+### Calendar View (Implemented)
 
-- **Monthly view** - main page
+**Features:**
+- **Monthly view** - 42-day grid (6 weeks × 7 days)
 - Navigation: left/right arrows to switch months
+- Click month title to return to current month
 - Each day cell can contain multiple training sessions
+- Events displayed with custom colors (6-character hex)
+- Logout button in header (clears HTTP Basic Auth credentials)
+
+**Responsive Design:**
+- CSS Grid layout (7 columns for desktop)
+- Mobile-first approach: stacks to single column on small screens
+- Touch-friendly elements (44x44px minimum tap targets)
+- Month name generated client-side via JavaScript
+- Events show: time, name, trainer name
+
+**TODO:**
 - Click on training → modal with details (trainer, participants, available spots)
-- **Responsive design required** - mobile interface for trainers/participants
-
-### Mobile-First Considerations
-
-- Touch-friendly elements (minimum 44x44px for buttons)
 - Swipe gestures for month navigation on mobile
-- Compact calendar view on small screens
-- Fast loading (minimal JS, lazy loading)
 
 ## Development Notes
 
@@ -188,13 +334,20 @@ When implementing database:
 5. Generate initial migration
 6. Apply migration to create tables
 
-### Testing Strategy
+### Event Color System
 
-Focus on:
-- Model validation and constraints
-- RFID check-in logic (critical business logic)
-- Calendar data generation (edge cases: month boundaries, recurring events)
-- API endpoint security (auth required for admin operations)
+Events use 6-character hex colors for visual distinction:
+
+- Stored in database as `String(6)` (e.g., "4CAF50")
+- Default color: "4CAF50" (Material Design Green)
+- Rendered in template: `style="background-color: #{{ event.color }}"`
+- Colors inherited from WeeklyEvent template to generated Events
+- Hover effect: `filter: brightness(0.9)` for better UX
+
+**Usage:**
+- Different colors for different training types (Longsword, Rapier, etc.)
+- Color-code by trainer for quick visual identification
+- Frontend displays events with inline styles for maximum compatibility
 
 ### ESP32 Integration
 
@@ -218,11 +371,19 @@ RFID_CHECKIN_WINDOW: int = 15  # minutes before/after start for check-in
 
 ## Security Considerations
 
-- Store RFID UIDs as-is (don't encrypt in DB, but protect at API level)
-- JWT for web authentication
+**Current Implementation:**
+- HTTP Basic Auth for web interface (username + password)
+- Passwords stored in plaintext (⚠️ TODO: hash with bcrypt/argon2)
+- Calendar requires authentication via `Depends(security)`
+- Logout via credential clearing (redirects to invalid auth URL)
+
+**TODO:**
+- Hash passwords before storing in database
+- JWT tokens for API authentication (optional, HTTP Basic Auth works for now)
 - RFID endpoint must be rate-limited (protection from brute-force scanning)
-- Admin endpoints require authentication with `admin` or `trainer` role
-- Validate all user inputs via Pydantic schemas
+- Role-based access control: WeeklyEvents API restricted to trainers
+- Store RFID UIDs as-is (don't encrypt in DB, but protect at API level)
+- Validate all user inputs via Pydantic schemas (✅ implemented)
 
 ## Performance Optimization
 
