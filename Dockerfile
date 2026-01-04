@@ -63,10 +63,6 @@ COPY --from=builder $UV_PYTHON_INSTALL_DIR $UV_PYTHON_INSTALL_DIR
 COPY --from=builder $UV_PROJECT_ENVIRONMENT $UV_PROJECT_ENVIRONMENT
 COPY static/ /app/static
 
-# Test installation before switching to app user
-RUN python3 -V && \
-    python -Im site
-
 USER app
 WORKDIR /app
 EXPOSE 8000
