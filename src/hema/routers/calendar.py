@@ -14,7 +14,7 @@ router = APIRouter(prefix="/calendar", tags=["Calendar"])
 
 
 # Configure Jinja2 with templates directory
-jinja = Environment(loader=FileSystemLoader(settings.PWD / "templates"))
+jinja = Environment(loader=FileSystemLoader(settings.ROOT / "templates"))
 
 
 @router.get("/", response_class=HTMLResponse)

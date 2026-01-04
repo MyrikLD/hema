@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from hema.config import settings
 from hema.db import db
@@ -19,6 +20,11 @@ api = FastAPI(
     title="HEMA Training Calendar",
     description="Training attendance tracking system for Historical European Martial Arts",
     version="0.1.0",
+)
+
+# Mount static files
+api.mount(
+    "/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static"
 )
 
 # Register API routers
