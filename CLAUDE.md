@@ -98,15 +98,19 @@ hema/
 
 ### RFID Check-in Flow
 
-**Critical Business Logic:**
+**Critical Business Logic (Updated Architecture):**
 
 ```
 1. ESP32 scans RFID → sends {"rfid_uid": "...", "timestamp": "..."}
-2. Backend finds User by rfid_uid
-3. Backend finds active Event (NOW between start and end)
-4. Backend creates Visit(user_id, event_id, timestamp)
-5. Returns success/error for ESP32 indication (LED/buzzer)
+2. Backend saves Visit(user_id, timestamp) - NO event_id during scan
+3. Post-processing: Find event by matching timestamp with event.start/end range
+4. Returns success/error for ESP32 indication (LED/buzzer)
 ```
+
+**Design Decision:** RFID scanning saves timestamp only, allowing:
+- Duplicates (multiple badge scans tracked separately)
+- Event association computed later (not during scan)
+- Simpler ESP32 logic (no event lookup required)
 
 ### Models Pattern
 
@@ -116,7 +120,6 @@ All models inherit from `models.base.Base` (SQLAlchemy DeclarativeBase) with sha
 - Use SQLAlchemy 2.0 syntax (`sa.Column`)
 - Add proper constraints (unique, nullable, default)
 - Update relationships for navigation between tables
-- Create indexes for frequently queried fields
 
 ### Missing Implementation
 
@@ -141,11 +144,11 @@ API follows RESTful pattern with resource grouping:
 - `/api/events/*` - training sessions CRUD
 - `/api/visits/*` - attendance records
 - `/api/calendar/{year}/{month}` - calendar data
-- `/api/rfid/checkin` - **special endpoint for ESP32**
+- `/api/checkin` - **special endpoint for ESP32**
 
 ### RFID Endpoint Requirements
 
-`POST /api/rfid/checkin` must:
+`POST /api/checkin` must:
 - Accept minimal payload from ESP32 (IoT device with limited resources)
 - Respond quickly (ESP32 timeout ~5-10 seconds)
 - Return simple JSON: `{"success": true/false, "message": "..."}`
