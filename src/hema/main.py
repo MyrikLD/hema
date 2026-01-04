@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from hema.config import settings
 from hema.db import db
-from hema.routers import calendar_router, events_router
+from hema.routers import calendar_router, events_router, weekly_events_router
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ api = FastAPI(
 # Register API routers
 api.include_router(calendar_router)
 api.include_router(events_router)
+api.include_router(weekly_events_router)
 
 
 @api.get("/health", include_in_schema=False)

@@ -14,20 +14,8 @@ from hema.schemas.events import EventResponse
 
 
 class CalendarService:
-    """Service for generating calendar data."""
-
     @staticmethod
     async def get_month_data(db: AsyncSession, month_date: date) -> CalendarMonth:
-        """
-        Build calendar data structure for template rendering.
-
-        Args:
-            db: Database session
-            month_date: Date object representing the month (day will be ignored, only year and month used)
-
-        Returns:
-            CalendarMonth schema with all calendar data for Jinja2 template
-        """
         year = month_date.year
         month = month_date.month
 
@@ -53,6 +41,7 @@ class CalendarService:
                 EventModel.color,
                 EventModel.start,
                 EventModel.end,
+                EventModel.weekly_id,
                 EventModel.trainer_id,
                 UserModel.name.label("trainer_name"),
             )

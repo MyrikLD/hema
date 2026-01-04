@@ -14,6 +14,7 @@ class EventBase(BaseModel):
     color: str = "4CAF50"
     start: datetime
     end: datetime
+    weekly_id: int | None = None
     trainer_id: int
 
 

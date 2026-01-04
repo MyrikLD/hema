@@ -22,7 +22,6 @@ async def calendar_current(
     db_session: AsyncSession = Depends(db.get_db),
     user_id: int = Depends(security),
 ):
-    """Show current month calendar."""
     today = date.today()
     calendar_data = await CalendarService.get_month_data(db_session, today)
     template = jinja.get_template("calendar.xhtml")
@@ -36,7 +35,6 @@ async def calendar_month(
     db_session: AsyncSession = Depends(db.get_db),
     user_id: int = Depends(security),
 ):
-    """Show specific month calendar."""
     month_date = date(year, month, 1)
     calendar_data = await CalendarService.get_month_data(db_session, month_date)
     template = jinja.get_template("calendar.xhtml")

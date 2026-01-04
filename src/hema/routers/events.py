@@ -20,17 +20,6 @@ async def list_events(
     ),
     session: AsyncSession = Depends(db.get_db),
 ):
-    """
-    List all events with pagination.
-
-    Args:
-        skip: Number of records to skip (for pagination)
-        limit: Maximum number of records to return
-        session: Database session dependency
-
-    Returns:
-        List of events
-    """
     stmt = (
         select(
             EventModel.id,
@@ -38,6 +27,7 @@ async def list_events(
             EventModel.color,
             EventModel.start,
             EventModel.end,
+            EventModel.weekly_id,
             EventModel.trainer_id,
             UserModel.name.label("trainer_name"),
         )
@@ -59,19 +49,6 @@ async def get_event(
     event_id: int,
     session: AsyncSession = Depends(db.get_db),
 ):
-    """
-    Get a specific event by ID.
-
-    Args:
-        event_id: Event ID
-        session: Database session dependency
-
-    Returns:
-        Event details
-
-    Raises:
-        HTTPException: 404 if event not found
-    """
     q = (
         select(
             EventModel.id,
@@ -79,6 +56,7 @@ async def get_event(
             EventModel.color,
             EventModel.start,
             EventModel.end,
+            EventModel.weekly_id,
             EventModel.trainer_id,
             UserModel.name.label("trainer_name"),
         )

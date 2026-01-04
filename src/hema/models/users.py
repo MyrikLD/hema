@@ -10,3 +10,6 @@ class UserModel(Base):
     name = sa.Column(sa.String(), nullable=False)
     password = sa.Column(sa.String(), nullable=False)
     rfid_uid = sa.Column(sa.String(), nullable=True)
+    is_trainer = sa.Column(
+        sa.Boolean(), nullable=False, server_default=sa.text("false")
+    )
