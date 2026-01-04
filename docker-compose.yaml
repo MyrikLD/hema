@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      - POSTGRES_DB=payroll
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    entrypoint: python -m hema.main
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
