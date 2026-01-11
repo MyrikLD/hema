@@ -10,6 +10,7 @@ from hema.schemas.weekly_events import (
     WeeklyEventUpdate,
 )
 from hema.services.weekly_event_service import WeeklyEventService
+from hema.auth import require_trainer
 
 router = APIRouter(prefix="/api/weekly", tags=["Weekly Events"])
 
@@ -54,6 +55,7 @@ async def get_weekly_event(
 async def create_weekly_event(
     data: WeeklyEventCreate,
     session: AsyncSession = Depends(db.get_db),
+    trainer_id: int = Depends(require_trainer),
 ):
     weekly_event = await WeeklyEventService(session).create_weekly_event(data)
 

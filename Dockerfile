@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.9
 
 # Stage 1: Runtime base (minimal)
-FROM --platform=${TARGETPLATFORM} debian:stable-slim AS runtime-base
+FROM debian:stable-slim AS runtime-base
 # Assure UTF-8 encoding is used.
 ENV LC_CTYPE=C.utf8
 # Location of the virtual environment
