@@ -1,12 +1,11 @@
 from pydantic import BaseModel, ConfigDict, Field
-from enum import StrEnum
+from enum import Enum
 
 
-class UserGender(StrEnum):
+class UserGender(str, Enum):
     MALE = "Male"
     FEMALE = "Female"
     OTHER = "Other"
-    PREF_NOT_TO_TELL = "Prefer not to tell"
 
 
 class UserCreateSchema(BaseModel):
@@ -14,14 +13,17 @@ class UserCreateSchema(BaseModel):
     password: str
     gender: UserGender = UserGender.OTHER
     phone: str
+    is_trainer: bool
 
     model_config = ConfigDict(extra="forbid")
 
 
 class UserCreateResponseSchema(BaseModel):
+    id: int
     name: str
     gender: UserGender = Field(default=UserGender.OTHER)
     phone: str
+    is_trainer: bool
 
     model_config = ConfigDict(from_attributes=True)
 

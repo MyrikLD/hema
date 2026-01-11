@@ -18,6 +18,18 @@ class EventBase(BaseModel):
     trainer_id: int
 
 
+class EventCreate(BaseModel):
+    """Event creation schema without trainer_id (comes from auth)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    color: str = "4CAF50"
+    start: datetime
+    end: datetime
+    weekly_id: int | None = None
+
+
 class EventResponse(EventBase):
     """Event response schema with ID and optional trainer name."""
 

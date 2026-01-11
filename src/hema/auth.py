@@ -45,4 +45,17 @@ class HTTPBasicAuth(HTTPBasic):
         return result
 
 
+async def require_trainer(
+    request: Request, session: AsyncSession = Depends(db.get_db)
+) -> int | None:
+    user_id = await security(request, session)
+    q = sa.select(UserModel.is_trainer).where(UserModel.id == user_id)
+    is_trainer = await session.scalar(q)
+    if not is_trainer:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only for Trainers"
+        )
+    return user_id
+
+
 security = HTTPBasicAuth()

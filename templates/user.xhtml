@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>HEMA User Profile</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico"/>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Header and navigation */
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-nav h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-buttons {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-primary:active {
+            background-color: #1c6ea4;
+        }
+
+        .btn-logout {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-logout:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-logout:active {
+            background-color: #a93226;
+        }
+
+        /* Main container */
+        .profile-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Profile card */
+        .profile-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .profile-header {
+            background-color: #34495e;
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .profile-header h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-role {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background-color: #3498db;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .profile-role.trainer {
+            background-color: #27ae60;
+        }
+
+        /* Profile body */
+        .profile-body {
+            padding: 2rem;
+        }
+
+        .profile-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .profile-field:last-child {
+            border-bottom: none;
+        }
+
+        .profile-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .profile-value {
+            font-size: 1rem;
+            color: #2c3e50;
+        }
+
+        /* Gender badge */
+        .gender-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #2c3e50;
+        }
+
+        .gender-badge.male {
+            background-color: #d6eaf8;
+            color: #2874a6;
+        }
+
+        .gender-badge.female {
+            background-color: #fadbd8;
+            color: #b03a2e;
+        }
+
+        .gender-badge.other {
+            background-color: #e8daef;
+            color: #7d3c98;
+        }
+
+        /* Actions */
+        .profile-actions {
+            padding: 1.5rem 2rem;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .btn-edit {
+            background-color: #27ae60;
+            color: white;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+
+        .btn-edit:hover {
+            background-color: #229954;
+        }
+
+        .btn-edit:active {
+            background-color: #1e8449;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #27ae60;
+        }
+
+        .status-dot.inactive {
+            background-color: #e74c3c;
+        }
+
+        /* Responsive design */
+        @media (max-width: 640px) {
+            .header-nav h1 {
+                font-size: 1.25rem;
+            }
+
+            .profile-container {
+                margin: 1rem auto;
+            }
+
+            .profile-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .profile-body {
+                padding: 1.5rem;
+            }
+
+            .profile-field {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .profile-actions {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .btn-edit {
+                width: 100%;
+            }
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        /* Error state */
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem;
+        }
+
+        /* Edit modal */
+        dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            border: none;
+            border-radius: 8px;
+            padding: 0;
+            max-width: 90%;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        dialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 44px;
+            height: 44px;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        /* Form styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.875rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn-save {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background-color: #229954;
+        }
+
+        /* Events section */
+        .events-section {
+            margin-top: 2rem;
+        }
+
+        .events-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .events-header h2 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .btn-create-event {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-create-event:hover {
+            background-color: #2980b9;
+        }
+
+        .events-list {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+
+        .event-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3498db;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .event-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .event-time {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .event-id {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .no-events {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            background-color: white;
+            border-radius: 8px;
+        }
+
+        /* Create event form */
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .color-preview {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .events-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .btn-create-event {
+                width: 100%;
+            }
+
+            .events-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <nav class="header-nav">
+        <h1>User Profile</h1>
+        <div class="nav-buttons">
+            <a href="/calendar" class="btn btn-primary">Calendar</a>
+            <a class="btn btn-logout" id="logout-btn">Logout</a>
+        </div>
+    </nav>
+</header>
+
+<main class="profile-container">
+    <div class="profile-card">
+        <div class="profile-header">
+            <h2>{{ user.name }}</h2>
+            <span class="profile-role{% if user.is_trainer %} trainer{% endif %}">
+                {% if user.is_trainer %}Trainer{% else %}User{% endif %}
+            </span>
+        </div>
+
+        <div class="profile-body">
+            <div class="profile-field">
+                <span class="profile-label">User ID</span>
+                <span class="profile-value">{{ user.id }}</span>
+            </div>
+
+            <div class="profile-field">
+                <span class="profile-label">Full Name</span>
+                <span class="profile-value">{{ user.name }}</span>
+            </div>
+
+            <div class="profile-field">
+                <span class="profile-label">Phone</span>
+                <span class="profile-value">{{ user.phone }}</span>
+            </div>
+
+            <div class="profile-field">
+                <span class="profile-label">Gender</span>
+                <span class="gender-badge {{ user.gender.lower() }}">{{ user.gender }}</span>
+            </div>
+
+            <div class="profile-field">
+                <span class="profile-label">Role</span>
+                <span class="profile-value">{% if user.is_trainer %}Trainer{% else %}User{% endif %}</span>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <button class="btn btn-edit" onclick="showEditModal()">Edit Profile</button>
+        </div>
+    </div>
+
+    <!-- Events section (only for trainers) -->
+    {% if user.is_trainer %}
+    <div class="events-section">
+        <div class="events-header">
+            <h2>My Training Events</h2>
+            <button class="btn btn-create-event" onclick="showCreateEventModal()">Create Event</button>
+        </div>
+        <div id="events-container">
+            <div class="loading">Loading events...</div>
+        </div>
+    </div>
+    {% endif %}
+</main>
+
+<!-- Edit profile modal -->
+<dialog id="edit-modal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeEditModal()" aria-label="Close">&times;</button>
+        <h2>Edit Profile</h2>
+        <form id="edit-form">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" value="{{ user.name }}" required/>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone" value="{{ user.phone }}" required/>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-save">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Create event modal -->
+<dialog id="create-event-modal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeCreateEventModal()" aria-label="Close">&times;</button>
+        <h2>Create Training Event</h2>
+        <form id="create-event-form">
+            <div class="form-group">
+                <label for="event-name">Event Name</label>
+                <input type="text" id="event-name" name="name" placeholder="e.g., Longsword Training" required/>
+            </div>
+
+            <div class="form-group">
+                <label for="event-start">Start Date & Time</label>
+                <input type="datetime-local" id="event-start" name="start" required/>
+            </div>
+
+            <div class="form-group">
+                <label for="event-end">End Date & Time</label>
+                <input type="datetime-local" id="event-end" name="end" required/>
+            </div>
+
+            <div class="form-group">
+                <label for="event-color">
+                    Event Color
+                    <span class="color-preview" id="color-preview" style="background-color: #4CAF50"></span>
+                </label>
+                <input type="color" id="event-color" name="color" value="#4CAF50"/>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeCreateEventModal()">Cancel</button>
+                <button type="submit" class="btn btn-save">Create Event</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    // Set logout href
+    document.getElementById('logout-btn').href = '//log:out@' + window.location.host + '/users/profile';
+
+    // Show edit modal
+    function showEditModal() {
+        const modal = document.getElementById('edit-modal');
+        modal.showModal();
+    }
+
+    // Close edit modal
+    function closeEditModal() {
+        const modal = document.getElementById('edit-modal');
+        modal.close();
+    }
+
+    // Handle form submission
+    document.getElementById('edit-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const data = {
+            name: formData.get('name'),
+            phone: formData.get('phone')
+        };
+
+        try {
+            const response = await fetch('/users/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                // Reload page to show updated data
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error updating profile: ' + (error.detail || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error updating profile: ' + error.message);
+        }
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('edit-modal').addEventListener('click', function(event) {
+        const modal = document.getElementById('edit-modal');
+        const rect = modal.getBoundingClientRect();
+        const isInDialog = (
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width
+        );
+        if (!isInDialog) {
+            modal.close();
+        }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditModal();
+            closeCreateEventModal();
+        }
+    });
+
+    // Event management functions
+    const isTrainer = {{ 'true' if user.is_trainer else 'false' }};
+
+    // Show create event modal
+    function showCreateEventModal() {
+        const modal = document.getElementById('create-event-modal');
+        modal.showModal();
+    }
+
+    // Close create event modal
+    function closeCreateEventModal() {
+        const modal = document.getElementById('create-event-modal');
+        modal.close();
+        document.getElementById('create-event-form').reset();
+        // Reset color preview
+        document.getElementById('color-preview').style.backgroundColor = '#4CAF50';
+    }
+
+    // Update color preview when color picker changes
+    if (document.getElementById('event-color')) {
+        document.getElementById('event-color').addEventListener('input', function(event) {
+            document.getElementById('color-preview').style.backgroundColor = event.target.value;
+        });
+    }
+
+    // Load trainer events on page load
+    if (isTrainer) {
+        loadTrainerEvents();
+    }
+
+    // Fetch and display trainer events
+    async function loadTrainerEvents() {
+        const container = document.getElementById('events-container');
+
+        try {
+            const response = await fetch('/users/profile/events');
+
+            if (response.ok) {
+                const events = await response.json();
+                displayEvents(events);
+            } else {
+                const error = await response.json();
+                container.innerHTML = '<div class="error">Error loading events: ' + (error.detail || 'Unknown error') + '</div>';
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="error">Error loading events: ' + error.message + '</div>';
+        }
+    }
+
+    // Display events in the container
+    function displayEvents(events) {
+        const container = document.getElementById('events-container');
+
+        if (!events || events.length === 0) {
+            container.innerHTML = '<div class="no-events">No events found. Create your first event!</div>';
+            return;
+        }
+
+        // Sort events by start date (newest first)
+        events.sort((a, b) => new Date(b.start) - new Date(a.start));
+
+        const eventsHTML = events.map(event => {
+            const start = new Date(event.start);
+            const end = new Date(event.end);
+            const startFormatted = start.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const endFormatted = end.toLocaleString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="event-card" style="border-left-color: #${event.color}">
+                    <div class="event-name">${escapeHtml(event.name)}</div>
+                    <div class="event-time">Start: ${startFormatted}</div>
+                    <div class="event-time">End: ${endFormatted}</div>
+                    <div class="event-id">Event ID: ${event.id}</div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = '<div class="events-list">' + eventsHTML + '</div>';
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Handle create event form submission
+    if (document.getElementById('create-event-form')) {
+        document.getElementById('create-event-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+
+            // Convert color from #RRGGBB to RRGGBB
+            const colorValue = formData.get('color').substring(1);
+
+            // Convert datetime-local to ISO format
+            const startDate = new Date(formData.get('start'));
+            const endDate = new Date(formData.get('end'));
+
+            const data = {
+                name: formData.get('name'),
+                color: colorValue,
+                start: startDate.toISOString(),
+                end: endDate.toISOString()
+            };
+
+            try {
+                const response = await fetch('/users/create_event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    // Close modal and reload events
+                    closeCreateEventModal();
+                    loadTrainerEvents();
+                } else {
+                    const error = await response.json();
+                    alert('Error creating event: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error creating event: ' + error.message);
+            }
+        });
+    }
+
+    // Close create event modal on backdrop click
+    if (document.getElementById('create-event-modal')) {
+        document.getElementById('create-event-modal').addEventListener('click', function(event) {
+            const modal = document.getElementById('create-event-modal');
+            const rect = modal.getBoundingClientRect();
+            const isInDialog = (
+                rect.top <= event.clientY &&
+                event.clientY <= rect.top + rect.height &&
+                rect.left <= event.clientX &&
+                event.clientX <= rect.left + rect.width
+            );
+            if (!isInDialog) {
+                closeCreateEventModal();
+            }
+        });
+    }
+</script>
+</body>
+</html>
