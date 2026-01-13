@@ -36,9 +36,7 @@ async def get_user_profile(
     service = UserService(session)
     user_profile = service.get_user_profile(user_id=user_id)
     if not user_profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile
 
 
@@ -49,11 +47,7 @@ async def update_user_profile(
     user_id: int = Depends(security),
 ):
     service = UserService(session)
-    user_profile = await service.update_user_profile(
-        user_id=user_id, update_data=update_data
-    )
+    user_profile = await service.update_user_profile(user_id=user_id, update_data=update_data)
     if not user_profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile

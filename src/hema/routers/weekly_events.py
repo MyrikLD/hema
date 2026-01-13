@@ -17,9 +17,7 @@ router = APIRouter(prefix="/api/weekly", tags=["Weekly Events"])
 @router.get("", response_model=list[WeeklyEventResponse])
 async def list_weekly_events(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(
-        100, ge=1, le=1000, description="Maximum number of records to return"
-    ),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
     session: AsyncSession = Depends(db.get_db),
 ):
     weekly_events = await WeeklyEventService(session).list_weekly_events(skip, limit)
@@ -48,9 +46,7 @@ async def get_weekly_event(
     return weekly_event
 
 
-@router.post(
-    "", response_model=WeeklyEventResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("", response_model=WeeklyEventResponse, status_code=status.HTTP_201_CREATED)
 async def create_weekly_event(
     data: WeeklyEventCreate,
     session: AsyncSession = Depends(db.get_db),
@@ -66,9 +62,7 @@ async def update_weekly_event(
     data: WeeklyEventUpdate,
     session: AsyncSession = Depends(db.get_db),
 ):
-    weekly_event = await WeeklyEventService(session).update_weekly_event(
-        weekly_event_id, data
-    )
+    weekly_event = await WeeklyEventService(session).update_weekly_event(weekly_event_id, data)
 
     if not weekly_event:
         raise HTTPException(

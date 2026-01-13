@@ -15,9 +15,7 @@ router = APIRouter(prefix="/api/events", tags=["Events"])
 @router.get("", response_model=list[EventResponse])
 async def list_events(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(
-        100, ge=1, le=1000, description="Maximum number of records to return"
-    ),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
     session: AsyncSession = Depends(db.get_db),
 ):
     stmt = (

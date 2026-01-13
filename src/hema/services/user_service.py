@@ -16,11 +16,7 @@ class UserService:
         q = sa.select(UserModel).where(UserModel.phone == new_user_data.phone)
         if await self.db.scalar(q):
             return None
-        q = (
-            sa.insert(UserModel)
-            .values(**new_user_data.model_dump())
-            .returning(UserModel)
-        )
+        q = sa.insert(UserModel).values(**new_user_data.model_dump()).returning(UserModel)
         return await self.db.scalar(q)
 
     async def get_user_profile(self, user_id: int) -> UserModel | None:
@@ -33,10 +29,5 @@ class UserService:
         data = update_data.model_dump(exclude_unset=True)
         if not data:
             return await self.get_user_profile(user_id)
-        q = (
-            sa.update(UserModel)
-            .where(UserModel.id == user_id)
-            .values(**data)
-            .returning(UserModel)
-        )
+        q = sa.update(UserModel).where(UserModel.id == user_id).values(**data).returning(UserModel)
         return await self.db.scalar(q)

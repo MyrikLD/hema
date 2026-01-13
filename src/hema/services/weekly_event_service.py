@@ -96,9 +96,7 @@ class WeeklyEventService:
         self, weekly_event_id: int, data: WeeklyEventUpdate
     ) -> dict | None:
         # Fetch WeeklyEvent
-        q = sa.select(*WeeklyEventModel.__table__.c).where(
-            WeeklyEventModel.id == weekly_event_id
-        )
+        q = sa.select(*WeeklyEventModel.__table__.c).where(WeeklyEventModel.id == weekly_event_id)
         weekly_event: dict = (await self.db.execute(q)).mappings().fetchone()
 
         if not weekly_event:
@@ -112,18 +110,11 @@ class WeeklyEventService:
             date_range_changed = True
         if _data["end"] is not None and _data["end"] != weekly_event["end"]:
             date_range_changed = True
-        if (
-            _data["event_start"] is not None
-            and _data["event_start"] != weekly_event["event_start"]
-        ):
+        if _data["event_start"] is not None and _data["event_start"] != weekly_event["event_start"]:
             date_range_changed = True  # Weekday might change
 
         # Update other fields
-        q = (
-            sa.update(WeeklyEventModel)
-            .where(WeeklyEventModel.id == weekly_event_id)
-            .values(_data)
-        )
+        q = sa.update(WeeklyEventModel).where(WeeklyEventModel.id == weekly_event_id).values(_data)
         await self.db.execute(q)
 
         if date_range_changed:
@@ -184,15 +175,11 @@ class WeeklyEventService:
         return result.rowcount > 0
 
     async def get_weekly_event(self, weekly_event_id: int) -> dict | None:
-        q = sa.select(*WeeklyEventModel.__table__.c).where(
-            WeeklyEventModel.id == weekly_event_id
-        )
+        q = sa.select(*WeeklyEventModel.__table__.c).where(WeeklyEventModel.id == weekly_event_id)
         d = (await self.db.execute(q)).mappings().fetchone()
         return d
 
-    async def list_weekly_events(
-        self, skip: int = 0, limit: int = 100
-    ) -> list[WeeklyEventModel]:
+    async def list_weekly_events(self, skip: int = 0, limit: int = 100) -> list[WeeklyEventModel]:
         q = (
             sa.select(WeeklyEventModel)
             .order_by(WeeklyEventModel.start, WeeklyEventModel.id)

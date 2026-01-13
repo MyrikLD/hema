@@ -2,17 +2,18 @@
 name = "hema"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = "==3.10.*"
+requires-python = "==3.12.*"
 dependencies = [
     "alembic>=1.17.2",
     "alembic-autogen-check>=1.1.1",
     "asyncpg>=0.31.0",
     "black>=25.12.0",
-    "fastapi[all]>=0.128.0",
+    "fastapi>=0.128.0",
+    "python-multipart",
     "jinja2>=3.1.6",
     "pydantic-settings>=2.12.0",
     "pytest>=9.0.2",
-    "sqlalchemy>=2.0.45",
+    "sqlalchemy==2.0.*",
     "uvicorn>=0.40.0",
 ]
 
@@ -25,3 +26,16 @@ packages = ["src/hema"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.black]
+target-version = ['py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | .venv
+  | alembic
+  | data
+)
+'''
+line-length = 100

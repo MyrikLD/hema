@@ -10,9 +10,7 @@ from hema.models import UserModel
 
 
 class HTTPBasicAuth(HTTPBasic):
-    async def __call__(
-        self, request: Request, session: AsyncSession = Depends(db.get_db)
-    ) -> int:
+    async def __call__(self, request: Request, session: AsyncSession = Depends(db.get_db)) -> int:
         credentials: HTTPBasicCredentials = await super().__call__(request)
 
         if credentials is None:
@@ -34,9 +32,7 @@ class HTTPBasicAuth(HTTPBasic):
         return user_id
 
     @staticmethod
-    async def verify(
-        session: AsyncSession, credentials: HTTPBasicCredentials
-    ) -> int | None:
+    async def verify(session: AsyncSession, credentials: HTTPBasicCredentials) -> int | None:
         q = sa.select(UserModel.id).where(
             UserModel.name == credentials.username,
             UserModel.password == credentials.password,

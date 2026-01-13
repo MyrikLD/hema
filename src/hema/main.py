@@ -6,7 +6,14 @@ from fastapi.staticfiles import StaticFiles
 
 from hema.config import settings
 from hema.db import db
-from hema.routers import calendar_router, events_router, weekly_events_router, users_router
+from hema.routers import (
+    calendar_router,
+    esp_router,
+    events_router,
+    users_router,
+    weekly_events_router,
+)
+
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
@@ -22,15 +29,15 @@ api = FastAPI(
 )
 
 # Mount static files
-api.mount(
-    "/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static"
-)
+api.mount("/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static")
 
 # Register API routers
 api.include_router(calendar_router)
 api.include_router(events_router)
 api.include_router(weekly_events_router)
 api.include_router(users_router)
+api.include_router(esp_router)
+
 
 @api.get("/health", include_in_schema=False)
 def health_check():
