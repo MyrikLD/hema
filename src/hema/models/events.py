@@ -8,7 +8,7 @@ class EventModel(Base):
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
-    name = sa.Column(sa.String)
+    name = sa.Column(sa.String, nullable=False)
     color = sa.Column(sa.String(6), nullable=False, default="4CAF50")
 
     start = sa.Column(sa.DateTime)

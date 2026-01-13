@@ -2,11 +2,11 @@
 
 import csv
 from datetime import datetime
-from typing import Annotated
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, File
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request
 
 from hema.db import db
 from hema.models import VisitModel
@@ -17,9 +17,10 @@ router = APIRouter(prefix="/api/esp", tags=["ESP"])
 
 @router.post("")
 async def receive_sync(
-    file: Annotated[bytes, File()],
+    request: Request,
     session: AsyncSession = Depends(db.get_db, scope="function"),
 ):
+    file = await request.body()
     reader = csv.DictReader(file.decode().splitlines())
     reader.fieldnames = ["timestamp", "uid"]
     items = [
@@ -29,6 +30,13 @@ async def receive_sync(
         }
         for i in reader
     ]
+    q = VisitModel.__table__.delete().where(
+        sa.and_(
+            VisitModel.timestamp == sa.bindparam("timestamp"),
+            VisitModel.uid == sa.bindparam("uid"),
+        )
+    )
+    await session.execute(q, items)
 
     uids = {row["uid"] for row in items}
     um = UserMapper()
