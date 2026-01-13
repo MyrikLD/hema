@@ -5,6 +5,7 @@ from datetime import datetime
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -62,3 +63,16 @@ async def receive_sync(
 
     q = sa.insert(VisitModel).values(values)
     await session.execute(q)
+
+
+@router.get("/available", response_model=dict[str, datetime])
+async def get_available_uids(
+    session: AsyncSession = Depends(db.get_db),
+):
+    q = (
+        sa.select(VisitModel.uid, func.max(VisitModel.timestamp))
+        .where(VisitModel.user_id.is_(None))
+        .group_by(VisitModel.uid)
+        .order_by(func.max(VisitModel.timestamp))
+    )
+    return dict((await session.execute(q)).all())

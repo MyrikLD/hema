@@ -1,27 +1,27 @@
-from pydantic import BaseModel, ConfigDict, Field
 from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserGender(StrEnum):
-    MALE = "Male"
-    FEMALE = "Female"
-    OTHER = "Other"
-    PREF_NOT_TO_TELL = "Prefer not to tell"
+    MALE = "m"
+    FEMALE = "f"
+    OTHER = "o"
 
 
 class UserCreateSchema(BaseModel):
     name: str
     password: str
     gender: UserGender = UserGender.OTHER
-    phone: str
+    phone: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
 
-class UserCreateResponseSchema(BaseModel):
+class UserResponseSchema(BaseModel):
     name: str
     gender: UserGender = Field(default=UserGender.OTHER)
-    phone: str
+    phone: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -29,10 +29,11 @@ class UserCreateResponseSchema(BaseModel):
 class UserProfileUpdateShema(BaseModel):
     name: str | None = None
     phone: str | None = None
+    gender: UserGender | None = None
+    password: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
 
 class UserProfileUpdateResponseShema(UserProfileUpdateShema):
-
     model_config = ConfigDict(from_attributes=True)

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 4d30ec38e41f
+Revision ID: acd7bcb22111
 Revises: 
-Create Date: 2026-01-13 11:33:49.358611
+Create Date: 2026-01-13 11:48:40.388698
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '4d30ec38e41f'
+revision: str = 'acd7bcb22111'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,11 +25,14 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('password', sa.String(), nullable=False),
-    sa.Column('gender', sa.String(), nullable=True),
     sa.Column('phone', sa.String(), nullable=True),
+    sa.Column('gender', sa.String(), nullable=True),
     sa.Column('rfid_uid', sa.String(), nullable=True),
     sa.Column('is_trainer', sa.Boolean(), server_default=sa.text('false'), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name'),
+    sa.UniqueConstraint('phone'),
+    sa.UniqueConstraint('rfid_uid')
     )
     op.create_table('weekly_events',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),

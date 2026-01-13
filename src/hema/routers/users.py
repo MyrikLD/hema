@@ -1,20 +1,15 @@
-from hema.auth import security
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from hema.schemas.users import (
-    UserCreateResponseSchema,
-    UserCreateSchema,
-    UserProfileUpdateShema,
-)
-from hema.services.user_service import UserService
+
 from hema.auth import security
 from hema.db import db
+from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema, UserResponseSchema
+from hema.services.user_service import UserService
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(prefix="/api/users", tags=["Users"])
 
 
-@router.post("/registration", response_model=UserCreateResponseSchema)
+@router.post("/registration", response_model=UserResponseSchema)
 async def user_registration(
     data: UserCreateSchema,
     session: AsyncSession = Depends(db.get_db),
@@ -28,19 +23,19 @@ async def user_registration(
     return new_user
 
 
-@router.get("/", response_model=UserCreateResponseSchema)
+@router.get("/me", response_model=UserResponseSchema)
 async def get_user_profile(
     session: AsyncSession = Depends(db.get_db),
     user_id: int = Depends(security),
 ):
     service = UserService(session)
-    user_profile = service.get_user_profile(user_id=user_id)
+    user_profile = await service.get(user_id=user_id)
     if not user_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile
 
 
-@router.patch("/", response_model=UserCreateResponseSchema)
+@router.patch("/", response_model=UserResponseSchema)
 async def update_user_profile(
     update_data: UserProfileUpdateShema,
     session: AsyncSession = Depends(db.get_db),
@@ -48,6 +43,19 @@ async def update_user_profile(
 ):
     service = UserService(session)
     user_profile = await service.update_user_profile(user_id=user_id, update_data=update_data)
+    if not user_profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user_profile
+
+
+@router.patch("/attach_uid", response_model=UserResponseSchema)
+async def update_user_profile(
+    uid: str = Body(..., embed=True),
+    session: AsyncSession = Depends(db.get_db),
+    user_id: int = Depends(security),
+):
+    service = UserService(session)
+    user_profile = await service.attach_uid(user_id=user_id, uid=uid)
     if not user_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile
