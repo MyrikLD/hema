@@ -1,43 +1,29 @@
 """API routes for Event management."""
 
+from datetime import date, datetime, time, UTC
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hema.auth import security
 from hema.db import db
-from hema.models.events import EventModel
-from hema.models.users import UserModel
-from hema.schemas.events import EventResponse
+from hema.schemas.events import EventCreateSchema, EventResponse
+from hema.services.event import EventService
 
 router = APIRouter(prefix="/api/events", tags=["Events"])
 
 
 @router.get("", response_model=list[EventResponse])
 async def list_events(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    start: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.min)),
+    end: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.max)),
     session: AsyncSession = Depends(db.get_db),
 ):
-    stmt = (
-        select(
-            EventModel.id,
-            EventModel.name,
-            EventModel.color,
-            EventModel.start,
-            EventModel.end,
-            EventModel.weekly_id,
-            EventModel.trainer_id,
-            UserModel.name.label("trainer_name"),
-        )
-        .join(UserModel, EventModel.trainer_id == UserModel.id)
-        .order_by(EventModel.start, EventModel.id)
-        .offset(skip)
-        .limit(limit)
+    service = EventService(session)
+    events = await service.list_events(
+        start.astimezone(UTC).replace(tzinfo=None),
+        end.astimezone(UTC).replace(tzinfo=None),
     )
-    rows = (await session.execute(stmt)).all()
-
-    # Build EventResponse with trainer_name
-    events = list(map(EventResponse.model_validate, rows))
 
     return events
 
@@ -47,27 +33,38 @@ async def get_event(
     event_id: int,
     session: AsyncSession = Depends(db.get_db),
 ):
-    q = (
-        select(
-            EventModel.id,
-            EventModel.name,
-            EventModel.color,
-            EventModel.start,
-            EventModel.end,
-            EventModel.weekly_id,
-            EventModel.trainer_id,
-            UserModel.name.label("trainer_name"),
-        )
-        .join(UserModel, EventModel.trainer_id == UserModel.id)
-        .where(EventModel.id == event_id)
-    )
-    row = (await session.execute(q)).fetchone()
+    service = EventService(session)
+    event_response = await service.by_id(event_id)
 
-    if not row:
+    if not event_response:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found"
         )
 
-    event_response = EventResponse.model_validate(row)
+    return event_response
+
+
+@router.post("", response_model=EventResponse)
+async def create_event(
+    event_data: EventCreateSchema,
+    session: AsyncSession = Depends(db.get_db),
+    user_id: int = Depends(security),
+):
+    service = EventService(session)
+
+    event_response = await service.create(event_data, user_id)
+
+    return event_response
+
+
+@router.post("/take/{event_id}", response_model=EventResponse)
+async def create_event(
+    event_id: int,
+    session: AsyncSession = Depends(db.get_db),
+    user_id: int = Depends(security),
+):
+    service = EventService(session)
+
+    event_response = await service.set_trainer(event_id, user_id)
 
     return event_response

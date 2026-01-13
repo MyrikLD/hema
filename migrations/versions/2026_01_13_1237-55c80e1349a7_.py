@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: acd7bcb22111
+Revision ID: 55c80e1349a7
 Revises: 
-Create Date: 2026-01-13 11:48:40.388698
+Create Date: 2026-01-13 12:37:47.619070
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'acd7bcb22111'
+revision: str = '55c80e1349a7'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,11 +28,15 @@ def upgrade() -> None:
     sa.Column('phone', sa.String(), nullable=True),
     sa.Column('gender', sa.String(), nullable=True),
     sa.Column('rfid_uid', sa.String(), nullable=True),
-    sa.Column('is_trainer', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name'),
     sa.UniqueConstraint('phone'),
     sa.UniqueConstraint('rfid_uid')
+    )
+    op.create_table('trainers',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('weekly_events',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -43,7 +47,7 @@ def upgrade() -> None:
     sa.Column('event_start', sa.DateTime(), nullable=True),
     sa.Column('event_end', sa.DateTime(), nullable=True),
     sa.Column('trainer_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['trainer_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['trainer_id'], ['trainers.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('events',
@@ -54,7 +58,7 @@ def upgrade() -> None:
     sa.Column('end', sa.DateTime(), nullable=True),
     sa.Column('weekly_id', sa.Integer(), nullable=True),
     sa.Column('trainer_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['trainer_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['trainer_id'], ['trainers.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['weekly_id'], ['weekly_events.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -76,5 +80,6 @@ def downgrade() -> None:
     op.drop_table('visits')
     op.drop_table('events')
     op.drop_table('weekly_events')
+    op.drop_table('trainers')
     op.drop_table('users')
     # ### end Alembic commands ###

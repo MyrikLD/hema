@@ -1,6 +1,4 @@
-"""Service for managing WeeklyEvent (recurring events) and generating Event instances."""
-
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hema.models.events import EventModel
 from hema.models.weekly_events import WeeklyEventModel
 from hema.schemas.weekly_events import WeeklyEventCreate, WeeklyEventUpdate
+
+
+def utcnow():
+    datetime.now(UTC).replace(tzinfo=None)
 
 
 class WeeklyEventService:
@@ -60,7 +62,7 @@ class WeeklyEventService:
 
         return len(items)
 
-    async def create_weekly_event(self, data: WeeklyEventCreate) -> dict:
+    async def create_weekly_event(self, data: WeeklyEventCreate, user_id: int) -> dict:
         # Create WeeklyEvent record
         weekly_event_id = await self.db.scalar(
             sa.insert(WeeklyEventModel)
@@ -72,7 +74,7 @@ class WeeklyEventService:
                     WeeklyEventModel.color: data.color,
                     WeeklyEventModel.event_start: data.event_start,
                     WeeklyEventModel.event_end: data.event_end,
-                    WeeklyEventModel.trainer_id: data.trainer_id,
+                    WeeklyEventModel.trainer_id: user_id,
                 }
             )
             .returning(WeeklyEventModel.id)
@@ -86,7 +88,7 @@ class WeeklyEventService:
             event_end=data.event_end,
             start=data.start,
             end=data.end,
-            trainer_id=data.trainer_id,
+            trainer_id=user_id,
             weekly_event_id=weekly_event_id,
         )
 
@@ -95,16 +97,14 @@ class WeeklyEventService:
     async def update_weekly_event(
         self, weekly_event_id: int, data: WeeklyEventUpdate
     ) -> dict | None:
-        # Fetch WeeklyEvent
         q = sa.select(*WeeklyEventModel.__table__.c).where(WeeklyEventModel.id == weekly_event_id)
-        weekly_event: dict = (await self.db.execute(q)).mappings().fetchone()
+        weekly_event = (await self.db.execute(q)).mappings().fetchone()
 
         if not weekly_event:
             return None
 
         _data = data.model_dump(exclude_unset=True)
 
-        # Track if date range changed (requires regeneration)
         date_range_changed = False
         if _data["start"] is not None and _data["start"] != weekly_event["start"]:
             date_range_changed = True
@@ -142,7 +142,7 @@ class WeeklyEventService:
                 sa.update(EventModel)
                 .where(
                     EventModel.weekly_id == weekly_event_id,
-                    EventModel.start > datetime.now(),
+                    EventModel.start > utcnow(),
                 )
                 .values(
                     name=weekly_event["name"],
@@ -159,7 +159,7 @@ class WeeklyEventService:
             sa.update(EventModel)
             .where(
                 EventModel.weekly_id == weekly_event_id,
-                EventModel.start > datetime.now(),
+                EventModel.start > utcnow(),
             )
             .values({EventModel.weekly_id: None})
         )
@@ -167,7 +167,7 @@ class WeeklyEventService:
 
         q = sa.delete(WeeklyEventModel).where(
             WeeklyEventModel.id == weekly_event_id,
-            EventModel.start > datetime.now(),
+            EventModel.start > utcnow(),
         )
 
         result = await self.db.execute(q)
@@ -179,12 +179,12 @@ class WeeklyEventService:
         d = (await self.db.execute(q)).mappings().fetchone()
         return d
 
-    async def list_weekly_events(self, skip: int = 0, limit: int = 100) -> list[WeeklyEventModel]:
+    async def list_weekly_events(self, start: datetime, end: datetime) -> list[WeeklyEventModel]:
         q = (
             sa.select(WeeklyEventModel)
             .order_by(WeeklyEventModel.start, WeeklyEventModel.id)
-            .offset(skip)
-            .limit(limit)
+            .where(WeeklyEventModel.event_start >= start)
+            .where(WeeklyEventModel.event_end <= end)
         )
         result = await self.db.execute(q)
         return list(result.scalars().all())

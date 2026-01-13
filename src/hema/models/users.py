@@ -15,4 +15,3 @@ class UserModel(Base):
     gender = sa.Column(sa.String(), nullable=True, default=UserGender.OTHER)
 
     rfid_uid = sa.Column(sa.String(), nullable=True, unique=True)
-    is_trainer = sa.Column(sa.Boolean(), nullable=False, server_default=sa.text("false"))

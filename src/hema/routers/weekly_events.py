@@ -1,8 +1,11 @@
 """API routes for WeeklyEvent (recurring events) management."""
 
+from datetime import date, datetime, time
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hema.auth import security
 from hema.db import db
 from hema.schemas.weekly_events import (
     WeeklyEventCreate,
@@ -16,11 +19,11 @@ router = APIRouter(prefix="/api/weekly", tags=["Weekly Events"])
 
 @router.get("", response_model=list[WeeklyEventResponse])
 async def list_weekly_events(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    start: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.min)),
+    end: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.max)),
     session: AsyncSession = Depends(db.get_db),
 ):
-    weekly_events = await WeeklyEventService(session).list_weekly_events(skip, limit)
+    weekly_events = await WeeklyEventService(session).list_weekly_events(start, end)
 
     # Convert to response schema
     responses = []
@@ -50,8 +53,9 @@ async def get_weekly_event(
 async def create_weekly_event(
     data: WeeklyEventCreate,
     session: AsyncSession = Depends(db.get_db),
+    user_id: int = Depends(security),
 ):
-    weekly_event = await WeeklyEventService(session).create_weekly_event(data)
+    weekly_event = await WeeklyEventService(session).create_weekly_event(data, user_id)
 
     return weekly_event
 

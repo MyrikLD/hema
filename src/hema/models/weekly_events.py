@@ -16,4 +16,4 @@ class WeeklyEventModel(Base):
     color = sa.Column(sa.String(6), nullable=False, default="4CAF50")
     event_start = sa.Column(sa.DateTime)
     event_end = sa.Column(sa.DateTime)
-    trainer_id = sa.Column(sa.Integer, sa.ForeignKey("users.id"))
+    trainer_id = sa.Column(sa.Integer, sa.ForeignKey("trainers.id", ondelete="SET NULL"))
