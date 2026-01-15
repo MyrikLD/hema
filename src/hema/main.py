@@ -3,11 +3,13 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from hema.config import settings
 from hema.db import db
 from hema.routers import (
     calendar_router,
+    calendar_api_router,
     esp_router,
     events_router,
     users_router,
@@ -28,11 +30,21 @@ api = FastAPI(
     version="0.1.0",
 )
 
+# Add CORS middleware
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Mount static files
 api.mount("/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static")
 
 # Register API routers
 api.include_router(calendar_router)
+api.include_router(calendar_api_router)
 api.include_router(events_router)
 api.include_router(weekly_events_router)
 api.include_router(users_router)
