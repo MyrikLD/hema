@@ -17,7 +17,6 @@ from hema.db import db
 from hema.models import UserModel
 from pwdlib import PasswordHash
 
-load = load_dotenv(dotenv_path="src/hema/.env")
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
