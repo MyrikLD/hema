@@ -1,9 +1,15 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from hema.auth import security
+from typing import Annotated
+from hema.auth import security, OAuthPasswordBearer, create_jwt_token
 from hema.db import db
-from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema, UserResponseSchema
+from hema.models import UserModel
+from hema.schemas.users import (
+    UserCreateSchema,
+    UserProfileUpdateShema,
+    UserResponseSchema,
+)
 from hema.services.user_service import UserService
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
@@ -59,3 +65,22 @@ async def update_user_profile(
     if not user_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile
+
+
+@router.post("/login")
+async def user_loggin_in(
+    data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: AsyncSession = Depends(db.get_db),
+) -> dict | None:
+    service = UserService(session)
+    user = await service.get_user_password(phone=data.username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    password_check = OAuthPasswordBearer.verify_password(data.password, user["password"])
+    if not password_check:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Phone or Password are invalid"
+        )
+    token_dict = {"user_id": user["id"]}
+    token = create_jwt_token(data=token_dict)
+    return {"access_token": token, "token_type": "bearer"}
