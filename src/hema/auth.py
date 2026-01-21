@@ -18,10 +18,6 @@ from hema.models import UserModel
 from pwdlib import PasswordHash
 
 
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = settings.ALGORITHM
-ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-
 password_hash = PasswordHash.recommended()
 
 
@@ -31,30 +27,33 @@ class OAuthPasswordBearer(OAuth2PasswordBearer):
         tokenUrl: str,
     ):
         super().__init__(tokenUrl=tokenUrl)
-        self.db = db
 
-    async def __call__(self, request: Request):
-        token = super().__call__(request)
-        payload = self.verify_jwt_token(token)
-        return payload
+    async def __call__(self, request: Request, session: AsyncSession = Depends(db.get_db)):
+        token = await super().__call__(request)
+        payload = self.verify_jwt_token(token=token)
+        user_id = payload["user_id"]
+        check_user = await self.check_current_user(user_id, session)
+        return check_user
 
     @staticmethod
-    def verify_password(plain_password, hashed_password) -> bool:
-        return password_hash.verify(plain_password, hashed_password)
-
-    def verify_jwt_token(self, token: str) -> dict | None:
+    def verify_jwt_token(token: str) -> dict | None:
         try:
-            decoded_token = jwt.decode(token, SECRET_KEY, ALGORITHM)
+            decoded_token = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
             return decoded_token
         except InvalidTokenError:
             raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token error")
 
-    def get_current_user(self, token: str) -> dict | None:
-        payload = self.verify_jwt_token(token)
-        if not payload:
-            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Unautorised user")
-        else:
-            return payload
+    @staticmethod
+    async def check_current_user(user_id: int, session: AsyncSession) -> dict | None:
+        q = sa.select(UserModel.id).where(UserModel.id == user_id)
+        user_id = await session.scalar(q)
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        return user_id
+
+
+def verify_password(plain_password, hashed_password) -> bool:
+    return password_hash.verify(plain_password, hashed_password)
 
 
 def password_hashing(user_password: str):
@@ -63,9 +62,9 @@ def password_hashing(user_password: str):
 
 def create_jwt_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode["exp"] = expire
-    token = jwt.encode(to_encode, SECRET_KEY, ALGORITHM)
+    token = jwt.encode(to_encode, settings.SECRET_KEY, settings.ALGORITHM)
     return token
 
 

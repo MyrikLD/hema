@@ -61,8 +61,8 @@ class UserService:
 
         return r
 
-    async def get_user_password(self, phone: str):
-        q = sa.select(UserModel.id, UserModel.password).where(UserModel.phone == phone)
+    async def get_user_password(self, username: str):
+        q = sa.select(UserModel.id, UserModel.password).where(UserModel.name == username)
         result = (await self.db.execute(q)).mappings().first()
         if not result:
             raise ValueError

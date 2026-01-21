@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
-from hema.auth import security, OAuthPasswordBearer, create_jwt_token
+from hema.auth import security, OAuthPasswordBearer, create_jwt_token, verify_password
 from hema.db import db
 from hema.models import UserModel
 from hema.schemas.users import (
@@ -11,6 +11,7 @@ from hema.schemas.users import (
     UserResponseSchema,
 )
 from hema.services.user_service import UserService
+from hema.auth import oauth2_scheme
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
@@ -32,7 +33,7 @@ async def user_registration(
 @router.get("/me", response_model=UserResponseSchema)
 async def get_user_profile(
     session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(security),
+    user_id: int = Depends(oauth2_scheme),
 ):
     service = UserService(session)
     user_profile = await service.get(user_id=user_id)
@@ -45,7 +46,7 @@ async def get_user_profile(
 async def update_user_profile(
     update_data: UserProfileUpdateShema,
     session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(security),
+    user_id: int = Depends(oauth2_scheme),
 ):
     service = UserService(session)
     user_profile = await service.update_user_profile(user_id=user_id, update_data=update_data)
@@ -58,7 +59,7 @@ async def update_user_profile(
 async def update_user_profile(
     uid: str = Body(..., embed=True),
     session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(security),
+    user_id: int = Depends(oauth2_scheme),
 ):
     service = UserService(session)
     user_profile = await service.attach_uid(user_id=user_id, uid=uid)
@@ -73,10 +74,10 @@ async def user_loggin_in(
     session: AsyncSession = Depends(db.get_db),
 ) -> dict | None:
     service = UserService(session)
-    user = await service.get_user_password(phone=data.username)
+    user = await service.get_user_password(username=data.username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    password_check = OAuthPasswordBearer.verify_password(data.password, user["password"])
+    password_check = verify_password(data.password, user["password"])
     if not password_check:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Phone or Password are invalid"
