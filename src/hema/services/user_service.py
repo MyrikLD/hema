@@ -1,6 +1,7 @@
 import sqlalchemy as sa
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from starlette import status
 from hema.auth import password_hashing, password_hashing
 from hema.models import UserModel, VisitModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
@@ -61,9 +62,12 @@ class UserService:
 
         return r
 
-    async def get_user_password(self, username: str):
+    async def get_user(self, username: str):
         q = sa.select(UserModel.id, UserModel.password).where(UserModel.name == username)
-        result = (await self.db.execute(q)).mappings().first()
-        if not result:
-            raise ValueError
-        return result
+        try:
+            result = (await self.db.execute(q)).mappings().first()
+            return result
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            ) from e

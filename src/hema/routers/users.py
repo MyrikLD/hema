@@ -74,7 +74,7 @@ async def user_loggin_in(
     session: AsyncSession = Depends(db.get_db),
 ) -> dict | None:
     service = UserService(session)
-    user = await service.get_user_password(username=data.username)
+    user = await service.get_user(username=data.username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     password_check = verify_password(data.password, user["password"])
@@ -82,6 +82,6 @@ async def user_loggin_in(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Phone or Password are invalid"
         )
-    token_dict = {"user_id": user["id"]}
-    token = create_jwt_token(data=token_dict)
+    token_payload = {"user_id": user["id"]}
+    token = create_jwt_token(data=token_payload)
     return {"access_token": token, "token_type": "bearer"}
