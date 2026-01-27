@@ -6,7 +6,7 @@ import jwt
 import sqlalchemy as sa
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jwt import InvalidTokenError
+from jwt import algorithms, PyJWTError
 from pwdlib import PasswordHash
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
@@ -31,9 +31,12 @@ class OAuthPasswordBearer(OAuth2PasswordBearer):
 
     @staticmethod
     def verify_jwt_token(token: str) -> dict:
+        if not algorithms.has_crypto:
+            raise Exception("No crypto support for JWT, please install the cryptography dependency")
+
         try:
             decoded_token = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
-        except InvalidTokenError:
+        except PyJWTError:
             raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token error")
 
         return decoded_token

@@ -16,8 +16,7 @@ dependencies = [
     "sqlalchemy==2.0.*",
     "uvicorn>=0.40.0",
     "pwdlib[argon2]>=0.3.0",
-    "jwt>=1.4.0",
-    "pyjwt>=2.10.1",
+    "pyjwt[crypto]>=2.9.0",
 ]
 
 [build-system]
