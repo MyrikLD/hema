@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.auth import security, oauth2_scheme
+from hema.auth import oauth2_scheme
 from hema.config import settings
 from hema.db import db
 from hema.services.calendar_service import CalendarService

@@ -5,7 +5,7 @@ from datetime import date, datetime, time
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.auth import security, oauth2_scheme
+from hema.auth import oauth2_scheme
 from hema.db import db
 from hema.schemas.weekly_events import (
     WeeklyEventCreate,

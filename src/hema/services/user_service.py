@@ -1,8 +1,7 @@
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette import status
-from hema.auth import password_hashing, password_hashing
+
+from hema.auth import password_hashing
 from hema.models import UserModel, VisitModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
@@ -25,9 +24,14 @@ class UserService:
         q = sa.insert(UserModel).values(values).returning(*UserModel.__table__.c)
         return (await self.db.execute(q)).mappings().first()
 
-    async def get(self, user_id: int) -> dict | None:
+    async def get_by_id(self, user_id: int) -> dict | None:
         q = sa.select(*UserModel.__table__.c).where(UserModel.id == user_id)
         return (await self.db.execute(q)).mappings().first()
+
+    async def get_by_username(self, username: str) -> dict | None:
+        q = sa.select(*UserModel.__table__.c).where(UserModel.username == username)
+        result = (await self.db.execute(q)).mappings().first()
+        return result
 
     async def update_user_profile(
         self, user_id: int, update_data: UserProfileUpdateShema
@@ -61,13 +65,3 @@ class UserService:
         await self.db.execute(q)
 
         return r
-
-    async def get_user(self, username: str):
-        q = sa.select(UserModel.id, UserModel.password).where(UserModel.name == username)
-        try:
-            result = (await self.db.execute(q)).mappings().first()
-            return result
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            ) from e

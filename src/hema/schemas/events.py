@@ -15,7 +15,7 @@ class EventBase(BaseModel):
     start: datetime
     end: datetime
     weekly_id: int | None = None
-    trainer_id: int
+    trainer_id: int | None
 
     @field_validator("start", "end", mode="before")
     def validate_date(cls, value):
