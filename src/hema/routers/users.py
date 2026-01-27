@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hema.auth import create_jwt_token, oauth2_scheme, verify_password
 from hema.db import db
 from hema.schemas.users import (
+    AuthResponseModel,
     UserCreateSchema,
     UserProfileUpdateShema,
     UserResponseSchema,
@@ -68,11 +69,11 @@ async def update_user_profile(
     return user_profile
 
 
-@router.post("/login")
+@router.post("/login", response_model=AuthResponseModel)
 async def user_loggin_in(
     data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: AsyncSession = Depends(db.get_db),
-) -> dict | None:
+) -> dict:
     service = UserService(session)
 
     user = await service.get_by_username(username=data.username)
@@ -81,9 +82,7 @@ async def user_loggin_in(
 
     password_check = verify_password(data.password, user["password"])
     if not password_check:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Phone or Password are invalid"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password are invalid")
 
     token_payload = {"user_id": user["id"]}
     token = create_jwt_token(data=token_payload)
