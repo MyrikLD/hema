@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +11,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).parent / ".env",
+        env_file=ROOT / ".env",
     )
 
 
