@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import algorithms, PyJWTError
 from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
@@ -15,7 +16,7 @@ from hema.config import settings
 from hema.db import db
 from hema.models import UserModel
 
-password_hash = PasswordHash.recommended()
+password_hash = PasswordHash((Argon2Hasher(),))
 
 
 class OAuthPasswordBearer(OAuth2PasswordBearer):
