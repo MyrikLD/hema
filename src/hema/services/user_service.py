@@ -1,6 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hema.auth import password_hashing
 from hema.models import UserModel, VisitModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
@@ -15,17 +16,22 @@ class UserService:
     ) -> dict | None:
         q = sa.select(UserModel.id).where(UserModel.phone == new_user_data.phone)
         if await self.db.scalar(q):
-            return None
-        q = (
-            sa.insert(UserModel)
-            .values(**new_user_data.model_dump())
-            .returning(*UserModel.__table__.c)
+            raise ValueError("Phone number already exists")
+        with_password = new_user_data.model_copy(
+            update={"password": password_hashing(new_user_data.password)}
         )
+        values = with_password.model_dump(mode="json", exclude_unset=True)
+        q = sa.insert(UserModel).values(values).returning(*UserModel.__table__.c)
         return (await self.db.execute(q)).mappings().first()
 
-    async def get(self, user_id: int) -> dict | None:
+    async def get_by_id(self, user_id: int) -> dict | None:
         q = sa.select(*UserModel.__table__.c).where(UserModel.id == user_id)
         return (await self.db.execute(q)).mappings().first()
+
+    async def get_by_username(self, username: str) -> dict | None:
+        q = sa.select(*UserModel.__table__.c).where(UserModel.username == username)
+        result = (await self.db.execute(q)).mappings().first()
+        return result
 
     async def update_user_profile(
         self, user_id: int, update_data: UserProfileUpdateShema

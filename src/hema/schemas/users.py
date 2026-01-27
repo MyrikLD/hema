@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -37,3 +38,8 @@ class UserProfileUpdateShema(BaseModel):
 
 class UserProfileUpdateResponseShema(UserProfileUpdateShema):
     model_config = ConfigDict(from_attributes=True)
+
+
+class AuthResponseModel(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"]

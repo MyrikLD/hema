@@ -5,7 +5,7 @@ from datetime import date, datetime, time, UTC
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.auth import security
+from hema.auth import oauth2_scheme
 from hema.db import db
 from hema.schemas.events import EventCreateSchema, EventResponse
 from hema.services.event import EventService
@@ -48,7 +48,7 @@ async def get_event(
 async def create_event(
     event_data: EventCreateSchema,
     session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(security),
+    user_id: int = Depends(oauth2_scheme),
 ):
     service = EventService(session)
 
@@ -61,7 +61,7 @@ async def create_event(
 async def create_event(
     event_id: int,
     session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(security),
+    user_id: int = Depends(oauth2_scheme),
 ):
     service = EventService(session)
 

@@ -5,7 +5,7 @@ from datetime import date, datetime, time
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.auth import security
+from hema.auth import oauth2_scheme
 from hema.db import db
 from hema.schemas.weekly_events import (
     WeeklyEventCreate,
@@ -53,7 +53,7 @@ async def get_weekly_event(
 async def create_weekly_event(
     data: WeeklyEventCreate,
     session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(security),
+    user_id: int = Depends(oauth2_scheme),
 ):
     weekly_event = await WeeklyEventService(session).create_weekly_event(data, user_id)
 
