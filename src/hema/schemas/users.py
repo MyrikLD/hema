@@ -11,7 +11,7 @@ class UserGender(StrEnum):
 
 
 class UserCreateSchema(BaseModel):
-    name: str
+    username: str
     password: str
     gender: UserGender = UserGender.OTHER
     phone: str | None = None
@@ -20,7 +20,7 @@ class UserCreateSchema(BaseModel):
 
 
 class UserResponseSchema(BaseModel):
-    name: str
+    username: str
     gender: UserGender = Field(default=UserGender.OTHER)
     phone: str | None = None
 
