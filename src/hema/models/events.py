@@ -20,3 +20,5 @@ class EventModel(Base):
         nullable=True,
     )
     trainer_id = sa.Column(sa.Integer, sa.ForeignKey("trainers.id", ondelete="SET NULL"))
+
+    price = sa.Column(sa.Integer, default=0)
