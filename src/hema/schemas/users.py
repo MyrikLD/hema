@@ -28,7 +28,7 @@ class UserResponseSchema(BaseModel):
 
 
 class UserProfileUpdateShema(BaseModel):
-    name: str | None = None
+    username: str | None = None
     phone: str | None = None
     gender: UserGender | None = None
     password: str | None = None

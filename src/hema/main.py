@@ -12,6 +12,7 @@ from hema.routers import (
     events_router,
     users_router,
     weekly_events_router,
+    payment_router,
 )
 
 
@@ -37,6 +38,7 @@ api.include_router(events_router)
 api.include_router(weekly_events_router)
 api.include_router(users_router)
 api.include_router(esp_router)
+api.include_router(payment_router)
 
 
 @api.get("/health", include_in_schema=False)

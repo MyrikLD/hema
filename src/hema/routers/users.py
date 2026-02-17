@@ -7,12 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import create_jwt_token, oauth2_scheme, verify_password
 from hema.db import db
-from hema.schemas.payments import (
-    DepositUpdateResponseShema,
-    DepositUpdateShema,
-    BalanceResponse,
-    DeleteUserPayment,
-)
 from hema.schemas.users import (
     AuthResponseModel,
     UserCreateSchema,
@@ -94,60 +88,3 @@ async def user_loggin_in(
     token_payload = {"user_id": user["id"]}
     token = create_jwt_token(data=token_payload)
     return {"access_token": token, "token_type": "bearer"}
-
-
-@router.get("/balance", response_model=BalanceResponse)
-async def get_user_balance(
-    user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)
-):
-    try:
-        service = UserService(session)
-        db_data = await service.get_user_balance(user_id)
-        return db_data
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No balance changes"
-        ) from e
-
-
-@router.post("/balance", response_model=DepositUpdateResponseShema)
-async def update_user_balance(
-    data: DepositUpdateShema,
-    session: AsyncSession = Depends(db.get_db),
-    trainer_id: int = Depends(oauth2_scheme),
-):
-    try:
-        service = UserService(session)
-        update = await service.update_user_deposit(payment_data=data, trainer_id=trainer_id)
-        return update
-    except IntegrityError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only for trainer") from e
-
-
-@router.delete("/delete_payment", response_model=DepositUpdateResponseShema)
-async def delete_user_payment(
-    id: DeleteUserPayment,
-    user_id: int = Depends(oauth2_scheme),
-    session: AsyncSession = Depends(db.get_db),
-) -> dict | None:
-    try:
-        service = UserService(session)
-        delete_payment = await service.delete_user_payment(id)
-        return delete_payment
-    except IntegrityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found"
-        ) from e
-
-
-@router.get("/payment_history", response_model=list[DepositUpdateResponseShema])
-async def get_user_payment_history(
-    user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)
-) -> dict | None:
-    service = UserService(session)
-    history = await service.get_user_payment_history(user_id=user_id)
-    if not history:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No users payments has been found"
-        )
-    return history
