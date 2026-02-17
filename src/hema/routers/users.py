@@ -37,7 +37,7 @@ async def get_user_profile(
     user_id: int = Depends(oauth2_scheme),
 ):
     service = UserService(session)
-    user_profile = await service.get(user_id=user_id)
+    user_profile = await service.get_by_id(user_id)
     if not user_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile
