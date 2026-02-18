@@ -3,7 +3,6 @@ import type { CalendarDay, Event } from '../types';
 import EventCard from './EventCard';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MAX_VISIBLE_EVENTS = { xs: 2, sm: 3, md: 4 };
 
 interface CalendarGridProps {
   days: CalendarDay[];
@@ -12,15 +11,15 @@ interface CalendarGridProps {
 
 export default function CalendarGrid({ days, onEventClick }: CalendarGridProps) {
   return (
-    <Box sx={{ overflow: 'hidden' }}>
-      {/* Weekday headers */}
+    <Box sx={{ overflow: 'hidden', width: '100%' }}>
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 0,
+          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+          width: '100%',
         }}
       >
+        {/* Weekday headers */}
         {WEEKDAYS.map((d) => (
           <Box
             key={d}
@@ -38,23 +37,10 @@ export default function CalendarGrid({ days, onEventClick }: CalendarGridProps) 
             {d}
           </Box>
         ))}
-      </Box>
 
-      {/* Day cells */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-          gap: 0,
-        }}
-      >
+        {/* Day cells */}
         {days.map((day) => {
           const isToday = day.is_today;
-          const hiddenCount = {
-            xs: Math.max(0, day.events.length - MAX_VISIBLE_EVENTS.xs),
-            sm: Math.max(0, day.events.length - MAX_VISIBLE_EVENTS.sm),
-            md: Math.max(0, day.events.length - MAX_VISIBLE_EVENTS.md),
-          };
           return (
             <Box
               key={day.date}
@@ -82,60 +68,9 @@ export default function CalendarGrid({ days, onEventClick }: CalendarGridProps) 
               >
                 {new Date(day.date + 'T00:00:00').getDate()}
               </Typography>
-              {day.events.map((event, idx) => (
-                <Box
-                  key={event.id}
-                  sx={{
-                    display: {
-                      xs: idx < MAX_VISIBLE_EVENTS.xs ? 'block' : 'none',
-                      sm: idx < MAX_VISIBLE_EVENTS.sm ? 'block' : 'none',
-                      md: idx < MAX_VISIBLE_EVENTS.md ? 'block' : 'none',
-                    },
-                  }}
-                >
-                  <EventCard event={event} onClick={onEventClick} />
-                </Box>
+              {day.events.map((event) => (
+                <EventCard key={event.id} event={event} onClick={onEventClick} />
               ))}
-              {/* "+N more" label, responsive per breakpoint */}
-              {hiddenCount.md > 0 && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: '0.65rem',
-                    color: 'text.secondary',
-                    display: { xs: 'none', md: 'block' },
-                    textAlign: 'center',
-                  }}
-                >
-                  +{hiddenCount.md} more
-                </Typography>
-              )}
-              {hiddenCount.sm > 0 && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: '0.65rem',
-                    color: 'text.secondary',
-                    display: { xs: 'none', sm: 'block', md: 'none' },
-                    textAlign: 'center',
-                  }}
-                >
-                  +{hiddenCount.sm} more
-                </Typography>
-              )}
-              {hiddenCount.xs > 0 && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: '0.65rem',
-                    color: 'text.secondary',
-                    display: { xs: 'block', sm: 'none' },
-                    textAlign: 'center',
-                  }}
-                >
-                  +{hiddenCount.xs} more
-                </Typography>
-              )}
             </Box>
           );
         })}
