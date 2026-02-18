@@ -36,7 +36,7 @@ export default function Layout() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static" color="primary">
+      <AppBar position="fixed" color="primary">
         <Toolbar variant="dense">
           <Typography
             variant="h6"
@@ -64,6 +64,7 @@ export default function Layout() {
         </Toolbar>
       </AppBar>
 
+      <Toolbar variant="dense" />
       <Box sx={{ flex: 1, overflow: 'auto', pb: isMobile ? 7 : 0 }}>
         <Outlet />
       </Box>
