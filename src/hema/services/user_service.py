@@ -2,7 +2,8 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import password_hashing
-from hema.models import UserModel, VisitModel
+from hema.models import UserModel, VisitModel, UserPaymentHistory, EventModel, TrainerModel
+from hema.schemas.payments import PaymentUpdateSchema
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
 
@@ -38,7 +39,7 @@ class UserService:
     ) -> dict | None:
         data = update_data.model_dump(exclude_unset=True)
         if not data:
-            return await self.get(user_id)
+            return await self.get_by_id(user_id)
         q = (
             sa.update(UserModel)
             .where(UserModel.id == user_id)

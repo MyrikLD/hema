@@ -9,6 +9,7 @@ from .intentions import router as intentions_router
 from .users import router as users_router
 from .visits import router as visits_router
 from .weekly_events import router as weekly_events_router
+from .payments import router as payment_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(calendar_router)
@@ -18,5 +19,5 @@ api_router.include_router(users_router)
 api_router.include_router(esp_router)
 api_router.include_router(intentions_router)
 api_router.include_router(visits_router)
-
+api_router.include_router(payment_router)
 __all__ = ["api_router"]
