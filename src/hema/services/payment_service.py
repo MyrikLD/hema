@@ -2,14 +2,14 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.models import UserModel, VisitModel, UserPaymentHistory, EventModel, TrainerModel
-from hema.schemas.payments import PaymentUpdateShema
+from hema.schemas.payments import PaymentUpdateSchema
 
 
 class PaymentService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def update_user_deposit(self, payment_data: PaymentUpdateShema, trainer_id: int) -> dict:
+    async def update_user_deposit(self, payment_data: PaymentUpdateSchema, trainer_id: int) -> dict:
         updated_data = payment_data.model_dump(mode="json", exclude_unset=True)
         updated_data["trainer_id"] = trainer_id
         if not updated_data:

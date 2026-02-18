@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import password_hashing
 from hema.models import UserModel, VisitModel, UserPaymentHistory, EventModel, TrainerModel
-from hema.schemas.payments import PaymentUpdateShema
+from hema.schemas.payments import PaymentUpdateSchema
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
 

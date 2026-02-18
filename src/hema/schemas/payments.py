@@ -1,16 +1,16 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
-class PaymentUpdateShema(BaseModel):
+class PaymentUpdateSchema(BaseModel):
     user_id: int
-    payment: int | None
+    payment: int = Field(gt=0)
     comment: str | None
 
     model_config = ConfigDict(extra="forbid")
 
 
-class PaymentResponseShema(PaymentUpdateShema):
+class PaymentResponseSchema(PaymentUpdateSchema):
     id: int
     timestamp: datetime
     trainer_id: int

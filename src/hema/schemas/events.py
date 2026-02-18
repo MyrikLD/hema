@@ -2,7 +2,7 @@
 
 from datetime import datetime, UTC
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator, Field
 
 
 class EventBase(BaseModel):
@@ -16,7 +16,7 @@ class EventBase(BaseModel):
     end: datetime
     weekly_id: int | None = None
     trainer_id: int | None
-    price: int | None
+    price: int = Field(default=0)
 
     @field_validator("start", "end", mode="before")
     def validate_date(cls, value):

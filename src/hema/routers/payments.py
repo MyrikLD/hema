@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hema.db import db
 from hema.auth import oauth2_scheme
 from hema.schemas.payments import (
-    PaymentResponseShema,
-    PaymentUpdateShema,
+    PaymentResponseSchema,
+    PaymentUpdateSchema,
 )
 from hema.services.payment_service import PaymentService
 
@@ -27,9 +27,9 @@ async def get_user_balance(
     return db_data
 
 
-@router.post("/balance", response_model=PaymentResponseShema)
+@router.post("/balance", response_model=PaymentResponseSchema)
 async def update_user_balance(
-    data: PaymentUpdateShema,
+    data: PaymentUpdateSchema,
     session: AsyncSession = Depends(db.get_db),
     trainer_id: int = Depends(oauth2_scheme),
 ):
@@ -46,7 +46,7 @@ async def delete_user_payment(
     payment_id: int,
     trainer_id: int = Depends(oauth2_scheme),
     session: AsyncSession = Depends(db.get_db),
-) -> dict | None:
+) -> int | None:
     service = PaymentService(session)
     try:
         delete_payment = await service.delete_user_payment(payment_id)
@@ -57,10 +57,10 @@ async def delete_user_payment(
     return delete_payment
 
 
-@router.get("/payment_history", response_model=list[PaymentResponseShema])
+@router.get("/payment_history", response_model=list[PaymentResponseSchema])
 async def get_user_payment_history(
     user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)
-) -> dict | None:
+) -> list:
     service = PaymentService(session)
     history = await service.get_user_payment_history(user_id=user_id)
     return history
