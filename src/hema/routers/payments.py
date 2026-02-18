@@ -10,7 +10,7 @@ from hema.schemas.payments import (
 )
 from hema.services.payment_service import PaymentService
 
-router = APIRouter(prefix="/api/payments", tags=["Payments"])
+router = APIRouter(prefix="/payments", tags=["Payments"])
 
 
 @router.get("/balance", response_model=int)
