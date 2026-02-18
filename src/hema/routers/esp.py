@@ -13,7 +13,7 @@ from hema.db import db
 from hema.models import VisitModel
 from hema.services.esp import EventMapper, UserMapper
 
-router = APIRouter(prefix="/api/esp", tags=["ESP"])
+router = APIRouter(prefix="/esp", tags=["ESP"])
 
 
 @router.post("")

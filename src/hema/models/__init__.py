@@ -1,4 +1,5 @@
 from .events import EventModel
+from .intentions import IntentionModel
 from .trainers import TrainerModel
 from .users import UserModel
 from .visits import VisitModel
