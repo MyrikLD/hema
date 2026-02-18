@@ -6,7 +6,7 @@ from hema.db import db
 from hema.schemas.visits import VisitResponse
 from hema.services.visit_service import VisitService
 
-router = APIRouter(prefix="/api/visits", tags=["Visits"])
+router = APIRouter(prefix="/visits", tags=["Visits"])
 
 
 @router.get("/me", response_model=list[VisitResponse])

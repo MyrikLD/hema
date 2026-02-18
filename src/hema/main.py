@@ -8,15 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from hema.config import settings
 from hema.db import db
-from hema.routers import (
-    calendar_router,
-    esp_router,
-    events_router,
-    intentions_router,
-    users_router,
-    visits_router,
-    weekly_events_router,
-)
+from hema.routers import api_router
 
 
 @asynccontextmanager
@@ -47,16 +39,13 @@ api.mount("/static", StaticFiles(directory=str(settings.ROOT / "static")), name=
 # Serve frontend build assets if available
 FRONTEND_DIST = settings.ROOT / "frontend" / "dist"
 if FRONTEND_DIST.exists():
-    api.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend-assets")
+    api.mount(
+        "/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend-assets"
+    )
 
 # Register API routers
-api.include_router(calendar_router)
-api.include_router(events_router)
-api.include_router(weekly_events_router)
-api.include_router(users_router)
-api.include_router(esp_router)
-api.include_router(intentions_router)
-api.include_router(visits_router)
+
+api.include_router(api_router)
 
 
 @api.get("/health", include_in_schema=False)

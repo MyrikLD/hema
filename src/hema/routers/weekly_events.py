@@ -14,7 +14,7 @@ from hema.schemas.weekly_events import (
 )
 from hema.services.weekly_event_service import WeeklyEventService
 
-router = APIRouter(prefix="/api/weekly", tags=["Weekly Events"])
+router = APIRouter(prefix="/weekly", tags=["Weekly Events"])
 
 
 @router.get("", response_model=list[WeeklyEventResponse])

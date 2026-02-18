@@ -6,7 +6,7 @@ from hema.db import db
 from hema.schemas.intentions import IntentionCreate, IntentionResponse
 from hema.services.intention_service import IntentionService
 
-router = APIRouter(prefix="/api/intentions", tags=["Intentions"])
+router = APIRouter(prefix="/intentions", tags=["Intentions"])
 
 
 @router.post("", response_model=IntentionResponse, status_code=status.HTTP_201_CREATED)

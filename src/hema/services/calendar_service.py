@@ -45,7 +45,7 @@ class CalendarService:
                 EventModel.trainer_id,
                 UserModel.name.label("trainer_name"),
             )
-            .join(UserModel, EventModel.trainer_id == UserModel.id)
+            .outerjoin(UserModel, EventModel.trainer_id == UserModel.id)
             .where(EventModel.start >= datetime.combine(grid_start, datetime.min.time()))
             .where(EventModel.start <= datetime.combine(grid_end, datetime.max.time()))
             .order_by(EventModel.start, EventModel.id)

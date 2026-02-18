@@ -14,7 +14,7 @@ from hema.schemas.users import (
 )
 from hema.services.user_service import UserService
 
-router = APIRouter(prefix="/api/users", tags=["Users"])
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/registration", response_model=UserResponseSchema)

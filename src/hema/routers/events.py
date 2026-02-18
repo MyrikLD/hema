@@ -10,7 +10,7 @@ from hema.db import db
 from hema.schemas.events import EventCreateSchema, EventResponse
 from hema.services.event import EventService
 
-router = APIRouter(prefix="/api/events", tags=["Events"])
+router = APIRouter(prefix="/events", tags=["Events"])
 
 
 @router.get("", response_model=list[EventResponse])
