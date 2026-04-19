@@ -30,7 +30,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({
-        name,
+        username: name,
         password,
         gender,
         ...(phone ? { phone } : {}),

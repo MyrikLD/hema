@@ -4,8 +4,12 @@ import {
   SwipeableDrawer,
   Typography,
   Divider,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import { CalendarMonth } from '@mui/icons-material';
 import type { Event } from '../types';
+import { exportEvent } from '../utils/ics';
 import SignUpButton from './SignUpButton';
 import AttendeeList from './AttendeeList';
 
@@ -16,8 +20,8 @@ interface EventDetailSheetProps {
   onOpen: () => void;
 }
 
-function formatDateTime(dateStr: string): string {
-  const d = new Date(dateStr);
+function formatDateTime(dateStr: string, timeStr: string): string {
+  const d = new Date(`${dateStr}T${timeStr}`);
   return d.toLocaleString([], {
     weekday: 'short',
     month: 'short',
@@ -70,10 +74,17 @@ export default function EventDetailSheet({ event, open, onClose, onOpen }: Event
         }}
       />
 
-      <Typography variant="h6">{event.name}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <Typography variant="h6">{event.name}</Typography>
+        <Tooltip title="Добавить в календарь (.ics)">
+          <IconButton size="small" onClick={() => exportEvent(event)}>
+            <CalendarMonth fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-        {formatDateTime(event.start)} &mdash; {formatDateTime(event.end)}
+        {formatDateTime(event.date, event.time_start)} &mdash; {event.time_end.slice(0, 5)}
       </Typography>
 
       <Divider sx={{ my: 2 }} />

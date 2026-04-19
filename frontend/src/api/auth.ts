@@ -16,7 +16,7 @@ export async function login(username: string, password: string): Promise<AuthRes
 }
 
 export async function register(data: {
-  name: string;
+  username: string;
   password: string;
   gender?: string;
   phone?: string;
@@ -28,7 +28,11 @@ export async function register(data: {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || 'Registration failed');
+    const detail = body.detail;
+    const message = Array.isArray(detail)
+      ? detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join('; ')
+      : (detail || 'Registration failed');
+    throw new Error(message);
   }
   return response.json();
 }

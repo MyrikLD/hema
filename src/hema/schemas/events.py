@@ -1,8 +1,8 @@
 """Pydantic schemas for Event API models."""
 
-from datetime import datetime, UTC
+from datetime import date, time
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator, Field
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class EventBase(BaseModel):
@@ -12,21 +12,19 @@ class EventBase(BaseModel):
 
     name: str
     color: str = "4CAF50"
-    start: datetime
-    end: datetime
+    date: date
+    time_start: time
+    time_end: time
     weekly_id: int | None = None
-    trainer_id: int | None
+    trainer_id: int | None = None
     price: int = 0
-
-    @field_validator("start", "end", mode="before")
-    def validate_date(cls, value):
-        return value.astimezone(UTC).replace(tzinfo=None)
 
 
 class EventResponse(EventBase):
-    """Event response schema with ID and optional trainer name."""
+    """Event response schema with ID."""
 
     id: int
+    trainer_name: str | None = None
 
 
 class EventCreateSchema(BaseModel):
@@ -34,18 +32,15 @@ class EventCreateSchema(BaseModel):
 
     name: str
     color: str = "4CAF50"
-    start: datetime
-    end: datetime
+    date: date
+    time_start: time
+    time_end: time
     price: int = 0
 
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
-    def validate_start_end(cls, values):
-        if values.start > values.end:
-            raise ValueError("start must be before end")
+    def validate_times(cls, values):
+        if values.time_start >= values.time_end:
+            raise ValueError("time_start must be before time_end")
         return values
-
-    @field_validator("start", "end", mode="after")
-    def validate_date(cls, value):
-        return value.astimezone(UTC).replace(tzinfo=None)

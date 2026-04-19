@@ -28,7 +28,7 @@ export default function App() {
               }
             >
               <Route path="/" element={<CalendarPage />} />
-              <Route path="/calendar/:year/:month" element={<CalendarPage />} />
+              <Route path="/calendar/:monday" element={<CalendarPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/history" element={<HistoryPage />} />
             </Route>

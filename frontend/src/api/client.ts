@@ -32,7 +32,11 @@ async function request<T>(
       window.location.href = '/login';
     }
     const body = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, body.detail || response.statusText);
+    const detail = body.detail;
+    const message = Array.isArray(detail)
+      ? detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join('; ')
+      : (typeof detail === 'string' ? detail : response.statusText);
+    throw new ApiError(response.status, message);
   }
 
   if (response.status === 204) {

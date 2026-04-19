@@ -8,12 +8,12 @@ class WeeklyEventModel(Base):
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
-    start = sa.Column(sa.Date)
-    end = sa.Column(sa.Date)
+    start = sa.Column(sa.Date, nullable=False)
+    end = sa.Column(sa.Date, nullable=False)
 
-    # Event default values
-    name = sa.Column(sa.String)
+    name = sa.Column(sa.String, nullable=False)
     color = sa.Column(sa.String(6), nullable=False, default="4CAF50")
-    event_start = sa.Column(sa.DateTime)
-    event_end = sa.Column(sa.DateTime)
+    weekday = sa.Column(sa.SmallInteger, nullable=False)  # 0=Monday … 6=Sunday
+    time_start = sa.Column(sa.Time, nullable=False)
+    time_end = sa.Column(sa.Time, nullable=False)
     trainer_id = sa.Column(sa.Integer, sa.ForeignKey("trainers.id", ondelete="SET NULL"))

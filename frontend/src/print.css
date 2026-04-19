@@ -1,0 +1,55 @@
+@media print {
+  /* Hide navigation chrome */
+  header,
+  footer,
+  nav,
+  .MuiAppBar-root,
+  .MuiBottomNavigation-root,
+  .MuiPaper-root:has(.MuiBottomNavigation-root),
+  .MuiDrawer-root,
+  .MuiIconButton-root,
+  .MuiTooltip-popper {
+    display: none !important;
+  }
+
+  /* Remove toolbar spacer */
+  .MuiToolbar-root {
+    display: none !important;
+  }
+
+  /* Full-width page, no padding */
+  body {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+
+  /* Expand calendar to fill the page */
+  .MuiBox-root {
+    overflow: visible !important;
+  }
+
+  /* Event cards: flat, no shadow, no hover */
+  [class*="ev"],
+  .MuiBox-root[style*="border-radius: 5px"] {
+    box-shadow: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    transform: none !important;
+  }
+
+  /* Trainer name: always visible in print */
+  .MuiTypography-root[style*="opacity: 0.65"] {
+    opacity: 1 !important;
+  }
+
+  [data-print="calendar"] {
+    overflow: visible !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+}

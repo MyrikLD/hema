@@ -1,8 +1,8 @@
 """Pydantic schemas for WeeklyEvent (recurring events)."""
 
-from datetime import date, datetime, UTC
+from datetime import date, time
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator, NaiveDatetime
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class WeeklyEventBase(BaseModel):
@@ -10,53 +10,40 @@ class WeeklyEventBase(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    start: date  # First date to create events
-    end: date  # Last date to create events
+    start: date
+    end: date
     name: str
     color: str = "4CAF50"
-    event_start: datetime  # Time for each event (e.g., Monday 18:00)
-    event_end: datetime  # Time for each event (e.g., Monday 20:00)
+    weekday: int = Field(ge=0, le=6)  # 0=Monday … 6=Sunday
+    time_start: time
+    time_end: time
 
     @model_validator(mode="after")
-    def validate_start_end(cls, values):
+    def validate_fields(cls, values):
         if values.start > values.end:
             raise ValueError("start must be before end")
-        if values.event_start > values.event_end:
-            raise ValueError("event_start must be before event_end")
+        if values.time_start >= values.time_end:
+            raise ValueError("time_start must be before time_end")
         return values
-
-    @field_validator("event_start", "event_end", mode="after")
-    def validate_date(cls, value):
-        return value.astimezone(UTC).replace(tzinfo=None)
 
 
 class WeeklyEventCreate(WeeklyEventBase):
-    """Schema for creating weekly event."""
-
     pass
 
 
 class WeeklyEventUpdate(BaseModel):
-    """Schema for updating weekly event."""
-
     model_config = ConfigDict(from_attributes=True)
 
     start: date | None = None
     end: date | None = None
     name: str | None = None
     color: str | None = None
-    event_start: NaiveDatetime | None = None
-    event_end: NaiveDatetime | None = None
+    weekday: int | None = Field(None, ge=0, le=6)
+    time_start: time | None = None
+    time_end: time | None = None
     trainer_id: int | None = None
-
-    @field_validator("start", "end", "event_start", "event_end", mode="after")
-    def validate_date(cls, value):
-        if value:
-            return value.astimezone(UTC).replace(tzinfo=None)
 
 
 class WeeklyEventResponse(WeeklyEventBase):
-    """Weekly event response schema with ID."""
-
     id: int
-    trainer_id: int
+    trainer_id: int | None = None

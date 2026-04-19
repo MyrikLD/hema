@@ -25,14 +25,15 @@ class EventMapper:
         self.event_ids = dict()
 
     async def load(self, session: AsyncSession, start, end):
-        q = (
-            sa.select(EventModel.id, EventModel.start, EventModel.end)
-            .where(EventModel.start <= start)
-            .where(EventModel.end >= end)
+        q = sa.select(EventModel.id, EventModel.date, EventModel.time_start, EventModel.time_end).where(
+            EventModel.date >= start.date(),
+            EventModel.date <= end.date(),
         )
-        self.event_ids = {
-            i["id"]: (i["start"], i["end"]) for i in (await session.execute(q)).mappings().all()
-        }
+        self.event_ids = {}
+        for row in (await session.execute(q)).mappings().all():
+            ev_start = datetime.combine(row["date"], row["time_start"])
+            ev_end = datetime.combine(row["date"], row["time_end"])
+            self.event_ids[row["id"]] = (ev_start, ev_end)
 
     def get(self, ts: datetime) -> int | None:
         for i, (start, end) in self.event_ids.items():

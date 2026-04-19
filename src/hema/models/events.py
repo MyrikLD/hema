@@ -11,8 +11,9 @@ class EventModel(Base):
     name = sa.Column(sa.String, nullable=False)
     color = sa.Column(sa.String(6), nullable=False, default="4CAF50")
 
-    start = sa.Column(sa.DateTime)
-    end = sa.Column(sa.DateTime)
+    date = sa.Column(sa.Date, nullable=False)
+    time_start = sa.Column(sa.Time, nullable=False)
+    time_end = sa.Column(sa.Time, nullable=False)
 
     weekly_id = sa.Column(
         sa.Integer,

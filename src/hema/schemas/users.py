@@ -21,6 +21,7 @@ class UserCreateSchema(BaseModel):
 
 class UserResponseSchema(BaseModel):
     username: str
+    name: str | None = None
     gender: UserGender = Field(default=UserGender.OTHER)
     phone: str | None = None
 
@@ -29,6 +30,7 @@ class UserResponseSchema(BaseModel):
 
 class UserProfileUpdateShema(BaseModel):
     username: str | None = None
+    name: str | None = None
     phone: str | None = None
     gender: UserGender | None = None
     password: str | None = None

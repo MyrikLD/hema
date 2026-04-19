@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.models import UserModel, VisitModel, UserPaymentHistory, EventModel, TrainerModel
+from hema.models import VisitModel, UserPaymentHistory, EventModel
 from hema.schemas.payments import PaymentUpdateSchema
 
 

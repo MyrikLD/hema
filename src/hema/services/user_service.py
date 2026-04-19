@@ -2,8 +2,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import password_hashing
-from hema.models import UserModel, VisitModel, UserPaymentHistory, EventModel, TrainerModel
-from hema.schemas.payments import PaymentUpdateSchema
+from hema.models import UserModel, VisitModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
 
@@ -15,9 +14,10 @@ class UserService:
         self,
         new_user_data: UserCreateSchema,
     ) -> dict | None:
-        q = sa.select(UserModel.id).where(UserModel.phone == new_user_data.phone)
-        if await self.db.scalar(q):
-            raise ValueError("Phone number already exists")
+        if new_user_data.phone:
+            q = sa.select(UserModel.id).where(UserModel.phone == new_user_data.phone)
+            if await self.db.scalar(q):
+                raise ValueError("Phone number already exists")
         with_password = new_user_data.model_copy(
             update={"password": password_hashing(new_user_data.password)}
         )
@@ -40,6 +40,8 @@ class UserService:
         data = update_data.model_dump(exclude_unset=True)
         if not data:
             return await self.get_by_id(user_id)
+        if "password" in data:
+            data["password"] = password_hashing(data["password"])
         q = (
             sa.update(UserModel)
             .where(UserModel.id == user_id)

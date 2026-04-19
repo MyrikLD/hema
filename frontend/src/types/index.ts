@@ -13,10 +13,13 @@ export interface Event {
   id: number;
   name: string;
   color: string;
-  start: string;
-  end: string;
+  date: string;       // "YYYY-MM-DD"
+  time_start: string; // "HH:MM:SS"
+  time_end: string;   // "HH:MM:SS"
   weekly_id: number | null;
   trainer_id: number | null;
+  trainer_name: string | null;
+  price: number;
 }
 
 export interface Intention {
@@ -41,16 +44,14 @@ export interface Visit {
   event_color: string | null;
 }
 
-export interface CalendarDay {
-  date: string;
-  is_today: boolean;
-  is_current_month: boolean;
-  events: Event[];
+export interface ScheduleEntry {
+  id: number;
+  name: string;
+  color: string;
+  weekday: number;    // 0=Monday … 6=Sunday
+  time_start: string; // "HH:MM:SS"
+  time_end: string;   // "HH:MM:SS"
+  trainer_id: number | null;
+  trainer_name: string | null;
 }
 
-export interface CalendarMonth {
-  date: string;
-  days: CalendarDay[];
-  prev_date: string;
-  next_date: string;
-}

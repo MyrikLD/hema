@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 HEMA Training Calendar - training attendance tracking system for Historical European Martial Arts with automatic RFID badge check-in.
 
-**Tech Stack:** FastAPI + PostgreSQL + SQLAlchemy + ESP32/MicroPython for RFID
+**Tech Stack:** FastAPI + PostgreSQL + SQLAlchemy (backend) + React + MUI (frontend) + ESP32/MicroPython for RFID
 
 ## Development Commands
 
@@ -27,12 +27,11 @@ PYTHONPATH=/home/myrik/work/my/hema/src python src/hema/main.py
 # or
 PYTHONPATH=/home/myrik/work/my/hema/src uvicorn hema.main:api --reload --host 0.0.0.0 --port 8000
 
+# Run frontend dev server (separate terminal)
+cd frontend && npm run dev  # Vite on http://localhost:5173
+
 # Health check
 curl http://localhost:8000/health
-
-# Access calendar (requires HTTP Basic Auth)
-# Browser will prompt for username/password
-open http://localhost:8000/calendar
 ```
 
 ### Testing
@@ -54,17 +53,14 @@ pytest --cov=.
 ```bash
 # Format code with black
 black .
-
-# Format specific files
-black main.py models/
 ```
 
 ### Database Operations
 ```bash
-# Database migrations will use Alembic (to be configured)
-# alembic revision --autogenerate -m "description"
-# alembic upgrade head
-# alembic downgrade -1
+# Alembic migrations
+alembic revision --autogenerate -m "description"
+alembic upgrade head
+alembic downgrade -1
 ```
 
 ## Code Architecture
@@ -73,329 +69,225 @@ black main.py models/
 
 ```
 hema/
-├── main.py              # FastAPI application entry point
-├── config.py            # Pydantic settings (database, app config)
-├── auth.py              # HTTP Basic Auth implementation
+├── main.py              # FastAPI application entry point + SPA fallback
+├── config.py            # Pydantic settings (DB_URI, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES)
+├── auth.py              # JWT auth: OAuthPasswordBearer, password hashing (Argon2), create_jwt_token
 ├── db.py                # Database connection and session management
 ├── models/              # SQLAlchemy models
 │   ├── base.py         # Base declarative class with shared metadata
-│   ├── users.py        # UserModel (users)
+│   ├── users.py        # UserModel
+│   ├── trainers.py     # TrainerModel (FK → users.id, marks user as trainer)
 │   ├── events.py       # EventModel (training sessions)
-│   ├── visits.py       # VisitModel (attendance records)
+│   ├── visits.py       # VisitModel (RFID scan records)
 │   ├── intentions.py   # IntentionModel (planned attendance)
-│   └── weekly_events.py # WeeklyEventModel (recurring event templates)
+│   ├── weekly_events.py # WeeklyEventModel (recurring event templates)
+│   └── payments.py     # UserPaymentHistory
 ├── schemas/             # Pydantic schemas for API validation
-│   ├── events.py       # EventBase, EventResponse
-│   ├── calendar.py     # CalendarDay, CalendarMonth
-│   └── weekly_events.py # WeeklyEventCreate, WeeklyEventUpdate, WeeklyEventResponse
+│   ├── events.py       # EventBase, EventResponse, EventCreateSchema
+│   ├── weekly_events.py # WeeklyEventCreate, WeeklyEventUpdate, WeeklyEventResponse
+│   ├── users.py        # UserCreateSchema, UserResponseSchema, AuthResponseModel
+│   ├── visits.py       # VisitResponse
+│   ├── intentions.py   # intention schemas
+│   ├── payments.py     # PaymentResponseSchema, PaymentUpdateSchema
+│   └── schedule.py     # ScheduleEntry
 ├── routers/             # API route handlers
-│   ├── calendar.py     # Calendar view routes
+│   ├── __init__.py     # api_router (prefix /api), includes all sub-routers
 │   ├── events.py       # Event CRUD endpoints
-│   └── weekly_events.py # WeeklyEvent CRUD endpoints
+│   ├── weekly_events.py # WeeklyEvent CRUD endpoints
+│   ├── schedule.py     # Schedule view (weekly events by date range)
+│   ├── users.py        # User registration, login, profile, RFID attach
+│   ├── visits.py       # Visit history for current user
+│   ├── intentions.py   # Intentions CRUD
+│   ├── payments.py     # Balance and payment history
+│   └── esp.py          # ESP32 CSV sync endpoint + available UIDs
 ├── services/            # Business logic layer
-│   ├── calendar_service.py # Calendar data generation
-│   └── weekly_event_service.py # Recurring event management
-└── templates/           # Jinja2 templates for frontend
-    └── calendar.xhtml  # Monthly calendar view (responsive)
+│   ├── esp.py          # UserMapper, EventMapper (used by ESP router)
+│   ├── event.py        # EventService
+│   ├── weekly_event_service.py # WeeklyEventService (recurring event management)
+│   ├── user_service.py # UserService
+│   ├── visit_service.py # VisitService
+│   ├── intention_service.py # IntentionService
+│   └── payment_service.py # PaymentService
+└── (no templates/ — frontend is React SPA)
+
+frontend/                # React SPA (Vite + MUI)
+├── src/
+│   ├── App.tsx         # Routes: /login, /register, /, /calendar/:monday, /profile, /history
+│   ├── pages/          # LoginPage, RegisterPage, CalendarPage, ProfilePage, HistoryPage
+│   ├── components/     # Layout, ProtectedRoute, CalendarGrid, EventDetailSheet, ...
+│   ├── contexts/       # AuthContext (JWT storage)
+│   ├── api/            # API client, auth.ts, client.ts
+│   └── types/          # TypeScript types
+└── dist/               # Built SPA, served by FastAPI (fallback: /{path:path})
 ```
 
 ### Data Model Relationships
 
-**Critical Architecture Detail:** The system uses the following data model:
-
 1. **Users** - users with RFID badges
-   - Fields: id, name, password, rfid_uid, role, is_active, created_at
-   - Roles: `user`, `trainer`, `admin`
-   - RFID UID links physical badge to user account
+   - Fields: id, username, name, password (Argon2 hash), phone, gender, rfid_uid
+   - `rfid_uid` links physical badge to user account (nullable, set via `/api/users/attach_uid`)
+   - Gender: `m`, `f`, `o` (StrEnum)
 
-2. **Events** - individual training sessions
-   - Fields: id, name, color (6-char hex), start, end, trainer_id, weekly_id
-   - `trainer_id` → `Users.id` (FK) - assigned trainer
-   - `weekly_id` → `WeeklyEvents.id` (FK, nullable) - link to recurring event template
+2. **Trainers** - marks a user as a trainer
+   - Single FK column: `id → users.id` (primary key)
+   - Used as FK target in events and payments
+
+3. **Events** - individual training sessions
+   - Fields: id, name, color (6-char hex), date (Date), time_start (Time), time_end (Time), weekly_id, trainer_id, price
+   - `trainer_id → trainers.id` (FK, SET NULL on delete)
+   - `weekly_id → weekly_events.id` (FK, CASCADE on delete)
    - Color stored as 6-character hex (e.g., "4CAF50")
 
-3. **WeeklyEvents** - recurring event templates (trainer abstraction)
-   - Fields: id, name, color, start (date), end (date), event_start (datetime), event_end (datetime), trainer_id
+4. **WeeklyEvents** - recurring event templates
+   - Fields: id, name, color, weekday (SmallInteger, 0=Mon…6=Sun), start (Date), end (Date), time_start (Time), time_end (Time), trainer_id
    - Generates Event records for each matching weekday in date range
-   - Weekday determined from `event_start.weekday()`
-   - When created: generates Events for all matching dates
-   - When updated (date range): deletes future Events and regenerates
-   - When deleted: sets `weekly_id=NULL` for future Events (doesn't cascade delete)
+   - `weekday` is stored explicitly (not derived from datetime)
+   - `trainer_id → trainers.id` (FK, SET NULL on delete)
 
-4. **Visits** - attendance records (links users and events)
-   - `user_id` → `Users.id` (FK)
-   - `event_id` → `Events.id` (FK) - ⚠️ **May be NULL during RFID scan**
-   - Created when RFID is scanned; event association computed post-processing
+5. **Visits** - RFID scan records
+   - PK: composite `(timestamp, uid)`
+   - Fields: timestamp (DateTime), uid (raw RFID string), user_id (nullable FK → users), event_id (nullable FK → events)
+   - `uid` is stored as raw string from ESP; linked to user via `users.rfid_uid`
+   - Both FKs set to SET NULL on delete
 
-5. **Intentions** - planned attendance (user declares intent to attend)
-   - `user_id` → `Users.id` (FK)
-   - `event_id` → `Events.id` (FK)
+6. **UserPaymentHistory** - payment records
+   - Fields: id, user_id (FK → users), trainer_id (FK → trainers), payment (Integer), timestamp, comment (nullable)
 
-### RFID Check-in Flow
+7. **Intentions** - planned attendance
+   - `user_id → users.id`, `event_id → events.id`
 
-**Critical Business Logic (Updated Architecture):**
+### Authentication Flow
+
+**JWT-based OAuth2 (replaced HTTP Basic Auth):**
+
+- Passwords hashed with Argon2 via `pwdlib`
+- Login: `POST /api/users/login` → returns `{access_token, token_type: "bearer"}`
+- Protected routes use `Depends(oauth2_scheme)` → returns `user_id: int`
+- `OAuthPasswordBearer` in `auth.py` verifies token and checks user exists in DB
+- Token payload: `{user_id: int, exp: datetime}`
+- Config: `SECRET_KEY`, `ALGORITHM = "HS256"`, `ACCESS_TOKEN_EXPIRE_MINUTES = 1440`
+
+### ESP32 Sync Flow
+
+**Batch CSV sync (replaced real-time RFID scan):**
 
 ```
-1. ESP32 scans RFID → sends {"rfid_uid": "...", "timestamp": "..."}
-2. Backend saves Visit(user_id, timestamp) - NO event_id during scan
-3. Post-processing: Find event by matching timestamp with event.start/end range
-4. Returns success/error for ESP32 indication (LED/buzzer)
+1. ESP32 accumulates scan records locally (timestamp, uid)
+2. ESP32 POSTs CSV body to POST /api/esp
+3. Backend:
+   a. Deletes any existing visits matching (timestamp, uid) pairs (dedup)
+   b. Maps UIDs → user_ids via UserMapper
+   c. Maps timestamps → event_ids via EventMapper (matches datetime to event date+time range)
+   d. Bulk inserts visit records with resolved user_id/event_id
+4. GET /api/esp/available - returns UIDs with no linked user (for admin to assign)
 ```
 
-**Design Decision:** RFID scanning saves timestamp only, allowing:
-- Duplicates (multiple badge scans tracked separately)
-- Event association computed later (not during scan)
-- Simpler ESP32 logic (no event lookup required)
+### WeeklyEvent Implementation Pattern
+
+WeeklyEvent acts as a template that generates Event instances:
+
+1. **Creation Flow:** generates Events for each matching weekday from `max(start, today)` to `end`
+2. **Update Flow:** if date range/time changed → deletes future Events, regenerates; if only name/color/trainer → updates in-place
+3. **Delete Flow:** CASCADE deletes future Events (FK with CASCADE), past Events preserved
+4. **Sync on startup:** `WeeklyEventService.sync_future_events()` called in lifespan to fill gaps
+
+**Key change:** `weekly_id` FK now uses `ondelete="CASCADE"` (not SET NULL), so deleting a WeeklyEvent removes its future Events.
 
 ### Architecture Patterns
 
 **Layered Architecture:**
 
-1. **Models Layer** (`models/`)
-   - SQLAlchemy ORM models
-   - All inherit from `models.base.Base` (DeclarativeBase)
-   - Shared `metadata` object for Alembic migrations
-   - Use SQLAlchemy 2.0 syntax (`sa.Column`)
-
-2. **Schemas Layer** (`schemas/`)
-   - Pydantic models for validation
-   - Use `ConfigDict(from_attributes=True)` for ORM compatibility
-   - Separate schemas for Create/Update/Response operations
-   - Example: EventBase → EventResponse (adds id, trainer_name)
-
-3. **Services Layer** (`services/`)
-   - Business logic encapsulation
-   - Database queries and data transformations
-   - Instance methods with `__init__(self, db: AsyncSession)` pattern
-   - Return dicts or ORM objects depending on use case
-
-4. **Routers Layer** (`routers/`)
-   - FastAPI route handlers
-   - Dependency injection: `Depends(db.get_db)`, `Depends(security)`
-   - Minimal logic - delegates to Services
-   - Response models via Pydantic schemas
+1. **Models Layer** (`models/`) - SQLAlchemy 2.0 ORM, `sa.Column` style, all inherit from `Base`
+2. **Schemas Layer** (`schemas/`) - Pydantic with `ConfigDict(from_attributes=True)` for ORM compat
+3. **Services Layer** (`services/`) - `__init__(self, db: AsyncSession)`, business logic
+4. **Routers Layer** (`routers/`) - FastAPI, delegates to services, uses `Depends(db.get_db)` + `Depends(oauth2_scheme)`
 
 **Conventions:**
 - Routers use `session` parameter name for AsyncSession
 - Services use `self.db` for database operations
-- All database operations are async (`await`)
-- SQL queries use SQLAlchemy 2.0 style (select, insert, update, delete)
-- Bulk operations prefer `sa.insert().values(items)` over ORM loops
+- All DB operations async
+- SQLAlchemy 2.0 style queries (select/insert/update/delete)
+- Bulk inserts: `sa.insert(Model).values(items)`
 
-### WeeklyEvent Implementation Pattern
+## API Endpoints
 
-**Recurring Events System:**
+**Users:**
+- `POST /api/users/registration` - register new user
+- `POST /api/users/login` - login, returns JWT
+- `GET /api/users/me` - get own profile (auth required)
+- `PATCH /api/users/` - update profile (auth required)
+- `PATCH /api/users/attach_uid` - link RFID uid to account (auth required)
 
-WeeklyEvent acts as a template that generates multiple Event instances:
+**Events:**
+- `GET /api/events?start=&end=` - list events in date range
+- `GET /api/events/{id}` - get single event
+- `POST /api/events` - create event (auth required)
+- `POST /api/events/take/{event_id}` - claim event as trainer (auth required)
 
-1. **Creation Flow:**
-   - Trainer creates WeeklyEvent with date range (start, end) and time template (event_start, event_end)
-   - System extracts weekday from `event_start.weekday()` (0=Monday, 6=Sunday)
-   - Generates Event for each matching weekday in range
-   - Events only created from `max(start, today)` onwards (skips past dates)
-   - Each Event gets `weekly_id` pointing to WeeklyEvent template
+**WeeklyEvents:**
+- `GET /api/weekly` - list recurring event templates
+- `GET /api/weekly/{id}` - get single template
+- `POST /api/weekly` - create recurring event (generates Events)
+- `PUT /api/weekly/{id}` - update template
+- `DELETE /api/weekly/{id}` - delete template (cascades future Events)
 
-2. **Update Flow:**
-   - If `start/end/event_start` changed → deletes future Events, regenerates new ones
-   - If only `name/color/trainer_id` changed → updates all future Events in-place
-   - Past Events never modified (preserves history)
+**Schedule:**
+- `GET /api/schedule?start=&end=` - list weekly events active in date range (for timetable view)
 
-3. **Delete Flow:**
-   - Sets `weekly_id=NULL` for all future Events (unlinks but preserves)
-   - Deletes WeeklyEvent record
-   - Past Events remain untouched
+**Visits:**
+- `GET /api/visits/me` - get own visit history (auth required, pagination: limit/offset)
 
-4. **Implementation Details:**
-   - WeeklyEventService uses instance methods (initialized with `db: AsyncSession`)
-   - Bulk inserts via `sa.insert(EventModel).values(items)` for performance
-   - Returns dicts instead of ORM objects for faster serialization
-   - Only operates on future Events (`EventModel.start > datetime.now()`)
+**Payments:**
+- `GET /api/payments/balance` - get own balance (auth required)
+- `POST /api/payments/balance` - add payment entry (trainer only, auth required)
+- `DELETE /api/payments/payment/{id}` - delete payment entry (auth required)
+- `GET /api/payments/payment_history` - get own payment history (auth required)
 
-### Implemented Features
+**ESP32:**
+- `POST /api/esp` - bulk CSV sync (body: CSV rows of `timestamp,uid`)
+- `GET /api/esp/available` - UIDs with no linked user, returns `dict[str, datetime]`
 
-**✅ Completed:**
-
-1. **Authentication** - HTTP Basic Auth (username/password)
-   - `HTTPBasicAuth` class in `auth.py`
-   - Logout via credential clearing
-
-2. **Calendar System** - Monthly calendar view
-   - 42-day grid (6 weeks × 7 days)
-   - Responsive design (mobile-first CSS Grid)
-   - Navigation: prev/next month, click title to return to current month
-   - Events displayed with custom colors
-   - Modal for event details
-
-3. **Event Management**
-   - GET `/api/events` - List events with pagination
-   - GET `/api/events/{id}` - Get single event
-   - EventResponse includes `trainer_name` via SQL JOIN
-
-4. **WeeklyEvent System** (Recurring Events)
-   - Full CRUD: POST/GET/PUT/DELETE `/api/weekly`
-   - Automatic Event generation for matching weekdays
-   - Smart updates: regenerates Events when date range changes
-   - Only future Events updated/deleted (preserves history)
-
-5. **Pydantic Schemas** - Full validation layer
-   - EventBase, EventResponse
-   - CalendarDay, CalendarMonth
-   - WeeklyEventCreate, WeeklyEventUpdate, WeeklyEventResponse
-
-6. **Services Layer**
-   - `CalendarService.get_month_data()` - Calendar data generation
-   - `WeeklyEventService` - Recurring event management
-
-### Missing Implementation
-
-**⚠️ TODO Items:**
-
-1. **RFID Check-in Endpoint** - `POST /api/checkin` not yet implemented
-2. **Visits Management** - No API endpoints for attendance records
-3. **User Management** - No CRUD endpoints for users
-4. **Intentions** - No API for planned attendance
-5. **Event Details Modal** - JavaScript for event modal not implemented
-6. **Admin UI** - No separate trainer/admin interface for WeeklyEvents
-
-## API Design Patterns
-
-### Implemented Endpoints
-
-API follows RESTful pattern with resource grouping:
-
-**Calendar Views (HTML):**
-- `GET /calendar` - Current month calendar (requires HTTP Basic Auth)
-- `GET /calendar/{year}/{month}` - Specific month calendar
-
-**Events API (JSON):**
-- `GET /api/events` - List all events (with pagination: skip, limit)
-- `GET /api/events/{id}` - Get single event details
-
-**WeeklyEvents API (JSON, Trainer-only):**
-- `GET /api/weekly` - List recurring event templates
-- `GET /api/weekly/{id}` - Get single template
-- `POST /api/weekly` - Create recurring event (generates Events)
-- `PUT /api/weekly/{id}` - Update template (regenerates future Events if needed)
-- `DELETE /api/weekly/{id}` - Delete template (preserves past Events)
-
-### TODO Endpoints
-
-- `/api/auth/*` - authentication (currently using HTTP Basic Auth)
-- `/api/users/*` - user CRUD operations
-- `/api/visits/*` - attendance records
-- `/api/intentions/*` - planned attendance
-- `/api/checkin` - **special endpoint for ESP32**
-
-### RFID Endpoint Requirements
-
-`POST /api/checkin` must:
-- Accept minimal payload from ESP32 (IoT device with limited resources)
-- Respond quickly (ESP32 timeout ~5-10 seconds)
-- Return simple JSON: `{"success": true/false, "message": "..."}`
-- Handle edge cases:
-  - RFID UID not found in database
-  - No active training session at the moment
-  - Duplicate registration (already checked in to this session)
+**Health:**
+- `GET /health` - liveness check
 
 ## Frontend Architecture
 
-**Server-Side Rendering** with Jinja2 for main pages, minimal JavaScript for interactivity.
+**React SPA** (Vite + MUI), served from `frontend/dist/` by FastAPI.
 
-### Calendar View (Implemented)
-
-**Features:**
-- **Monthly view** - 42-day grid (6 weeks × 7 days)
-- Navigation: left/right arrows to switch months
-- Click month title to return to current month
-- Each day cell can contain multiple training sessions
-- Events displayed with custom colors (6-character hex)
-- Logout button in header (clears HTTP Basic Auth credentials)
-
-**Responsive Design:**
-- CSS Grid layout (7 columns for desktop)
-- Mobile-first approach: stacks to single column on small screens
-- Touch-friendly elements (44x44px minimum tap targets)
-- Month name generated client-side via JavaScript
-- Events show: time, name, trainer name
-
-**TODO:**
-- Click on training → modal with details (trainer, participants, available spots)
-- Swipe gestures for month navigation on mobile
-
-## Development Notes
-
-### Database Setup Order
-
-When implementing database:
-1. Complete all model definitions first
-2. Add all foreign keys and relationships
-3. Configure database connection in config.py
-4. Initialize Alembic
-5. Generate initial migration
-6. Apply migration to create tables
-
-### Event Color System
-
-Events use 6-character hex colors for visual distinction:
-
-- Stored in database as `String(6)` (e.g., "4CAF50")
-- Default color: "4CAF50" (Material Design Green)
-- Rendered in template: `style="background-color: #{{ event.color }}"`
-- Colors inherited from WeeklyEvent template to generated Events
-- Hover effect: `filter: brightness(0.9)` for better UX
-
-**Usage:**
-- Different colors for different training types (Longsword, Rapier, etc.)
-- Color-code by trainer for quick visual identification
-- Frontend displays events with inline styles for maximum compatibility
-
-### ESP32 Integration
-
-MicroPython code for ESP32 is outside this repository, but the API must consider:
-- Minimal response size (limited memory on ESP32)
-- Network error handling (WiFi may disconnect)
-- Retry logic should be on ESP32 side
-- Use HTTP (not HTTPS) for simplicity or self-signed certificate
+- Dev server: `npm run dev` on port 5173, proxies API to backend
+- Build: `npm run build` → `frontend/dist/` (FastAPI serves `/assets/` and SPA fallback)
+- Auth: JWT stored in context/localStorage, `AuthContext` wraps app
+- Routes: `/login`, `/register`, `/` (CalendarPage), `/calendar/:monday`, `/profile`, `/history`
+- CORS: FastAPI allows `http://localhost:5173` explicitly
 
 ## Configuration
 
-### Environment Variables (to be added to config.py)
-
 ```python
-DATABASE_URL: str  # postgresql+asyncpg://user:pass@host/db
-SECRET_KEY: str    # for JWT tokens
-DEBUG: bool = False
-CORS_ORIGINS: list[str] = ["*"]
-RFID_CHECKIN_WINDOW: int = 15  # minutes before/after start for check-in
+# .env file (required)
+DB_URI=postgresql+asyncpg://user:pass@host/db
+SECRET_KEY=<random secret>
+
+# Optional (have defaults)
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours
 ```
 
-## Security Considerations
+## Security
 
-**Current Implementation:**
-- HTTP Basic Auth for web interface (username + password)
-- Passwords stored in plaintext (⚠️ TODO: hash with bcrypt/argon2)
-- Calendar requires authentication via `Depends(security)`
-- Logout via credential clearing (redirects to invalid auth URL)
-
-**TODO:**
-- Hash passwords before storing in database
-- JWT tokens for API authentication (optional, HTTP Basic Auth works for now)
-- RFID endpoint must be rate-limited (protection from brute-force scanning)
-- Role-based access control: WeeklyEvents API restricted to trainers
-- Store RFID UIDs as-is (don't encrypt in DB, but protect at API level)
-- Validate all user inputs via Pydantic schemas (✅ implemented)
+- Passwords hashed with Argon2 (`pwdlib`)
+- JWT tokens, 24h expiry
+- `oauth2_scheme` dependency verifies token + checks user exists
+- RFID UIDs stored as plain strings (no encryption needed)
 
 ## Performance Optimization
 
-- Indexes on: `users.rfid_uid`, `events.start`, `events.end`, `visits.user_id`, `visits.event_id`
-- Cache calendar queries (Redis in the future)
-- Use async/await for database queries
-- Pagination for user and visit lists
+- Indexes on: `users.rfid_uid`, `events.date`, `visits.user_id`, `visits.event_id`
+- Use async/await for all DB operations
+- Bulk inserts via `sa.insert().values(items)` for ESP sync
 
 ## Deployment (future)
 
-Project is being prepared for Docker deployment:
 - PostgreSQL container
-- FastAPI application container
-- Reverse proxy (nginx) for HTTPS and static files
+- FastAPI serves both API and built React SPA
+- Reverse proxy (nginx) for HTTPS
 - ESP32 connects to public API endpoint

@@ -1,95 +1,117 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Box,
-  IconButton,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
-import type { CalendarMonth, Event } from '../types';
+import { Box, IconButton, Typography, CircularProgress, Tooltip } from '@mui/material';
+import { ChevronLeft, ChevronRight, CalendarMonth } from '@mui/icons-material';
+import type { Event } from '../types';
 import { get } from '../api/client';
+import { exportEvents } from '../utils/ics';
 import CalendarGrid from '../components/CalendarGrid';
 import EventDetailSheet from '../components/EventDetailSheet';
 
+function getMondayOf(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+}
+
+function addDays(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+}
+
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function formatWeekTitle(monday: Date): string {
+  const sunday = addDays(monday, 6);
+  const mo = { day: 'numeric', month: 'short' } as const;
+  if (monday.getMonth() === sunday.getMonth()) {
+    return `${monday.getDate()}–${sunday.getDate()} ${sunday.toLocaleString('default', { month: 'short' })} ${sunday.getFullYear()}`;
+  }
+  if (monday.getFullYear() === sunday.getFullYear()) {
+    return `${monday.toLocaleString('default', mo)} – ${sunday.toLocaleString('default', { ...mo, year: 'numeric' })}`;
+  }
+  return `${monday.toLocaleString('default', { ...mo, year: 'numeric' })} – ${sunday.toLocaleString('default', { ...mo, year: 'numeric' })}`;
+}
+
 export default function CalendarPage() {
-  const { year, month } = useParams<{ year: string; month: string }>();
+  const { monday: mondayParam } = useParams<{ monday: string }>();
   const navigate = useNavigate();
-  const [data, setData] = useState<CalendarMonth | null>(null);
+
+  const monday = useMemo(
+    () => mondayParam ? getMondayOf(new Date(mondayParam + 'T00:00:00')) : getMondayOf(new Date()),
+    [mondayParam],
+  );
+  const mondayStr = toISODate(monday);
+  const sundayStr = toISODate(addDays(monday, 6));
+
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const fetchCalendar = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const path = year && month ? `/calendar/${year}/${month}` : '/calendar';
-      const result = await get<CalendarMonth>(path);
-      setData(result);
+      const evts = await get<Event[]>(`/events?start=${mondayStr}&end=${sundayStr}`);
+      setEvents(evts);
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [mondayStr]);
 
   useEffect(() => {
-    fetchCalendar();
-  }, [fetchCalendar]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setSheetOpen(true);
+  const goWeek = (offset: number) => {
+    navigate(`/calendar/${toISODate(addDays(monday, offset * 7))}`);
   };
-
-  const handleNavigate = (dateStr: string) => {
-    const [y, m] = dateStr.split('-');
-    navigate(`/calendar/${y}/${parseInt(m)}`);
-  };
-
-  const handleTitleClick = () => {
-    navigate('/');
-  };
-
-  if (loading || !data) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  const monthDate = new Date(data.date + 'T00:00:00');
-  const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
     <Box>
-      {/* Month navigation */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          py: 1,
-          px: 1,
-        }}
-      >
-        <IconButton onClick={() => handleNavigate(data.prev_date)} size="small">
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, px: 1 }}>
+        <IconButton onClick={() => goWeek(-1)} size="small">
           <ChevronLeft />
         </IconButton>
         <Typography
           variant="h6"
           sx={{ cursor: 'pointer', fontWeight: 600, fontSize: '1rem' }}
-          onClick={handleTitleClick}
+          onClick={() => navigate('/')}
         >
-          {monthName}
+          {formatWeekTitle(monday)}
         </Typography>
-        <IconButton onClick={() => handleNavigate(data.next_date)} size="small">
-          <ChevronRight />
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="Экспорт недели (.ics)">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => exportEvents(events, `hema_${mondayStr}.ics`)}
+                disabled={events.length === 0}
+              >
+                <CalendarMonth fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <IconButton onClick={() => goWeek(1)} size="small">
+            <ChevronRight />
+          </IconButton>
+        </Box>
       </Box>
 
-      <CalendarGrid days={data.days} onEventClick={handleEventClick} />
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+        </Box>
+      ) : (
+        <CalendarGrid
+          events={events}
+          weekStart={monday}
+          onEventClick={(e) => { setSelectedEvent(e); setSheetOpen(true); }}
+        />
+      )}
 
       <EventDetailSheet
         event={selectedEvent}

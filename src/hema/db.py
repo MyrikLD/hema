@@ -8,12 +8,14 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from hema.config import settings
+
 
 class Database:
     engine: AsyncEngine = None
     async_session: async_sessionmaker[AsyncSession] = None
 
-    def init_db(self, database_url: str, echo: bool = False):
+    def __init__(self, database_url: str, echo: bool = False):
         self.engine = create_async_engine(
             database_url,
             echo=False,
@@ -23,16 +25,11 @@ class Database:
             pool_timeout=30,
         )
         if echo:
-            # Clear all sqlalchemy handlers
             logging.getLogger("sqlalchemy.engine.Engine").handlers.clear()
 
-        # Create async session factory
         self.async_session = async_sessionmaker(self.engine, expire_on_commit=False)
 
-    # Dependency to get DB session
     async def get_db(self) -> AsyncSession:
-        if self.async_session is None:
-            raise Exception("Database not initialized")
         async with self.async_session() as session, session.begin():
             yield session
 
@@ -43,4 +40,4 @@ class Database:
 
 
 # Create a single instance
-db = Database()
+db = Database(settings.DB_URI)

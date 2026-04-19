@@ -9,11 +9,13 @@ from fastapi.staticfiles import StaticFiles
 from hema.config import settings
 from hema.db import db
 from hema.routers import api_router
+from hema.services.weekly_event_service import WeeklyEventService
 
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
-    db.init_db(settings.DB_URI)
+    async with db.context() as session:
+        await WeeklyEventService(session).sync_future_events()
     yield
 
 
@@ -34,13 +36,17 @@ api.add_middleware(
 )
 
 # Mount static files
-api.mount("/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static")
+api.mount(
+    "/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static"
+)
 
 # Serve frontend build assets if available
 FRONTEND_DIST = settings.ROOT / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     api.mount(
-        "/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend-assets"
+        "/assets",
+        StaticFiles(directory=str(FRONTEND_DIST / "assets")),
+        name="frontend-assets",
     )
 
 # Register API routers

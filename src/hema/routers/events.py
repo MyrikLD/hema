@@ -1,6 +1,6 @@
 """API routes for Event management."""
 
-from datetime import date, datetime, time, UTC
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,17 +15,12 @@ router = APIRouter(prefix="/events", tags=["Events"])
 
 @router.get("", response_model=list[EventResponse])
 async def list_events(
-    start: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.min)),
-    end: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.max)),
+    start: date = Query(default_factory=date.today),
+    end: date = Query(default_factory=date.today),
     session: AsyncSession = Depends(db.get_db),
 ):
     service = EventService(session)
-    events = await service.list_events(
-        start.astimezone(UTC).replace(tzinfo=None),
-        end.astimezone(UTC).replace(tzinfo=None),
-    )
-
-    return events
+    return await service.list_events(start, end)
 
 
 @router.get("/{event_id}", response_model=EventResponse)
@@ -58,7 +53,7 @@ async def create_event(
 
 
 @router.post("/take/{event_id}", response_model=EventResponse)
-async def create_event(
+async def take_event(
     event_id: int,
     session: AsyncSession = Depends(db.get_db),
     user_id: int = Depends(oauth2_scheme),

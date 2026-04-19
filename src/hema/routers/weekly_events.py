@@ -1,6 +1,6 @@
 """API routes for WeeklyEvent (recurring events) management."""
 
-from datetime import date, datetime, time
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,18 +19,12 @@ router = APIRouter(prefix="/weekly", tags=["Weekly Events"])
 
 @router.get("", response_model=list[WeeklyEventResponse])
 async def list_weekly_events(
-    start: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.min)),
-    end: datetime = Query(default_factory=lambda: datetime.combine(date.today(), time.max)),
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
     session: AsyncSession = Depends(db.get_db),
 ):
     weekly_events = await WeeklyEventService(session).list_weekly_events(start, end)
-
-    # Convert to response schema
-    responses = []
-    for we in weekly_events:
-        responses.append(WeeklyEventResponse.model_validate(we))
-
-    return responses
+    return [WeeklyEventResponse.model_validate(we) for we in weekly_events]
 
 
 @router.get("/{weekly_event_id}", response_model=WeeklyEventResponse)
@@ -39,13 +33,8 @@ async def get_weekly_event(
     session: AsyncSession = Depends(db.get_db),
 ):
     weekly_event = await WeeklyEventService(session).get_weekly_event(weekly_event_id)
-
     if not weekly_event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"WeeklyEvent {weekly_event_id} not found",
-        )
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found")
     return weekly_event
 
 
@@ -55,9 +44,7 @@ async def create_weekly_event(
     session: AsyncSession = Depends(db.get_db),
     user_id: int = Depends(oauth2_scheme),
 ):
-    weekly_event = await WeeklyEventService(session).create_weekly_event(data, user_id)
-
-    return weekly_event
+    return await WeeklyEventService(session).create_weekly_event(data, user_id)
 
 
 @router.put("/{weekly_event_id}", response_model=WeeklyEventResponse)
@@ -67,13 +54,8 @@ async def update_weekly_event(
     session: AsyncSession = Depends(db.get_db),
 ):
     weekly_event = await WeeklyEventService(session).update_weekly_event(weekly_event_id, data)
-
     if not weekly_event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"WeeklyEvent {weekly_event_id} not found",
-        )
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found")
     return weekly_event
 
 
@@ -83,9 +65,5 @@ async def delete_weekly_event(
     session: AsyncSession = Depends(db.get_db),
 ):
     deleted = await WeeklyEventService(session).delete_weekly_event(weekly_event_id)
-
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"WeeklyEvent {weekly_event_id} not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found")
