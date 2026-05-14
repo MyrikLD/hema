@@ -1,6 +1,8 @@
+import io
+import qrcode
+
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hema.auth import password_hashing
 from hema.models import UserModel, VisitModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
@@ -68,3 +70,11 @@ class UserService:
         await self.db.execute(q)
 
         return r
+
+    async def qr_gen(self, user_id: int):
+        buffer = io.BytesIO()
+        image = qrcode.make(str(user_id))
+        image.save(stream=buffer, format="PNG")
+        result = buffer.getvalue()
+        buffer.close()
+        return result

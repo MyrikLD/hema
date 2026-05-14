@@ -1,5 +1,4 @@
 import sqlalchemy as sa
-
 from hema.schemas.users import UserGender
 from .base import Base
 
