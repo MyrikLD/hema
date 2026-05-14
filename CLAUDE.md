@@ -209,6 +209,16 @@ WeeklyEvent acts as a template that generates Event instances:
 - SQLAlchemy 2.0 style queries (select/insert/update/delete)
 - Bulk inserts: `sa.insert(Model).values(items)`
 
+## Key Conventions
+
+**SQLAlchemy usage:** Core queries only — no ORM relationships (`relationship`), no lazy loading. Queries are written with `select()`, `insert()`, etc. Use `sa.text()` only for PostgreSQL-specific syntax that cannot be expressed via Core. Use `.mappings().all()` for multi-column row results — access by column name, not index. Sessions used as async context managers via `session()` (general use) or `SessionDep` (FastAPI dependency). **Never call `commit()` or `rollback()` or `flush()` manually** — `session()` commits on success and rolls back on exception automatically.
+
+**Model style:** Models are defined with `import sqlalchemy as sa` and classical `sa.Column(...)` — no `Mapped`, no `mapped_column`, no type annotations on columns, no `from __future__ import annotations`, no `__all__`.
+
+**Structured data:** Use Pydantic `BaseModel` for structured objects — no `dataclass`.
+
+**No logic in `__init__.py`:** All logic lives in dedicated modules. `__init__.py` files are re-exports only.
+
 ## API Endpoints
 
 **Users:**
