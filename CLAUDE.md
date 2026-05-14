@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HEMA Training Calendar - training attendance tracking system for Historical European Martial Arts with automatic RFID badge check-in.
+HEMA Training Calendar - training attendance tracking system for Historical European Martial Arts with QR code check-in.
 
-**Tech Stack:** FastAPI + PostgreSQL + SQLAlchemy (backend) + React + MUI (frontend) + ESP32/MicroPython for RFID
+**Tech Stack:** FastAPI + PostgreSQL + SQLAlchemy (backend) + React + MUI (frontend)
 
 ## Development Commands
 
@@ -78,7 +78,7 @@ hema/
 │   ├── users.py        # UserModel
 │   ├── trainers.py     # TrainerModel (FK → users.id, marks user as trainer)
 │   ├── events.py       # EventModel (training sessions)
-│   ├── visits.py       # VisitModel (RFID scan records)
+│   ├── visits.py       # VisitModel (QR scan records)
 │   ├── intentions.py   # IntentionModel (planned attendance)
 │   ├── weekly_events.py # WeeklyEventModel (recurring event templates)
 │   └── payments.py     # UserPaymentHistory
@@ -95,13 +95,11 @@ hema/
 │   ├── events.py       # Event CRUD endpoints
 │   ├── weekly_events.py # WeeklyEvent CRUD endpoints
 │   ├── schedule.py     # Schedule view (weekly events by date range)
-│   ├── users.py        # User registration, login, profile, RFID attach
+│   ├── users.py        # User registration, login, profile
 │   ├── visits.py       # Visit history for current user
 │   ├── intentions.py   # Intentions CRUD
 │   ├── payments.py     # Balance and payment history
-│   └── esp.py          # ESP32 CSV sync endpoint + available UIDs
 ├── services/            # Business logic layer
-│   ├── esp.py          # UserMapper, EventMapper (used by ESP router)
 │   ├── event.py        # EventService
 │   ├── weekly_event_service.py # WeeklyEventService (recurring event management)
 │   ├── user_service.py # UserService
@@ -123,9 +121,8 @@ frontend/                # React SPA (Vite + MUI)
 
 ### Data Model Relationships
 
-1. **Users** - users with RFID badges
-   - Fields: id, username, name, password (Argon2 hash), phone, gender, rfid_uid
-   - `rfid_uid` links physical badge to user account (nullable, set via `/api/users/attach_uid`)
+1. **Users** - user accounts
+   - Fields: id, username, name, password (Argon2 hash), phone, gender
    - Gender: `m`, `f`, `o` (StrEnum)
 
 2. **Trainers** - marks a user as a trainer
@@ -144,10 +141,9 @@ frontend/                # React SPA (Vite + MUI)
    - `weekday` is stored explicitly (not derived from datetime)
    - `trainer_id → trainers.id` (FK, SET NULL on delete)
 
-5. **Visits** - RFID scan records
+5. **Visits** - QR check-in records
    - PK: composite `(timestamp, uid)`
-   - Fields: timestamp (DateTime), uid (raw RFID string), user_id (nullable FK → users), event_id (nullable FK → events)
-   - `uid` is stored as raw string from ESP; linked to user via `users.rfid_uid`
+   - Fields: timestamp (DateTime), uid (string), user_id (nullable FK → users), event_id (nullable FK → events)
    - Both FKs set to SET NULL on delete
 
 6. **UserPaymentHistory** - payment records
@@ -158,7 +154,7 @@ frontend/                # React SPA (Vite + MUI)
 
 ### Authentication Flow
 
-**JWT-based OAuth2 (replaced HTTP Basic Auth):**
+**JWT-based OAuth2:**
 
 - Passwords hashed with Argon2 via `pwdlib`
 - Login: `POST /api/users/login` → returns `{access_token, token_type: "bearer"}`
@@ -166,21 +162,6 @@ frontend/                # React SPA (Vite + MUI)
 - `OAuthPasswordBearer` in `auth.py` verifies token and checks user exists in DB
 - Token payload: `{user_id: int, exp: datetime}`
 - Config: `SECRET_KEY`, `ALGORITHM = "HS256"`, `ACCESS_TOKEN_EXPIRE_MINUTES = 1440`
-
-### ESP32 Sync Flow
-
-**Batch CSV sync (replaced real-time RFID scan):**
-
-```
-1. ESP32 accumulates scan records locally (timestamp, uid)
-2. ESP32 POSTs CSV body to POST /api/esp
-3. Backend:
-   a. Deletes any existing visits matching (timestamp, uid) pairs (dedup)
-   b. Maps UIDs → user_ids via UserMapper
-   c. Maps timestamps → event_ids via EventMapper (matches datetime to event date+time range)
-   d. Bulk inserts visit records with resolved user_id/event_id
-4. GET /api/esp/available - returns UIDs with no linked user (for admin to assign)
-```
 
 ### WeeklyEvent Implementation Pattern
 
@@ -191,7 +172,7 @@ WeeklyEvent acts as a template that generates Event instances:
 3. **Delete Flow:** CASCADE deletes future Events (FK with CASCADE), past Events preserved
 4. **Sync on startup:** `WeeklyEventService.sync_future_events()` called in lifespan to fill gaps
 
-**Key change:** `weekly_id` FK now uses `ondelete="CASCADE"` (not SET NULL), so deleting a WeeklyEvent removes its future Events.
+`weekly_id` FK uses `ondelete="CASCADE"`, so deleting a WeeklyEvent removes its future Events.
 
 ### Architecture Patterns
 
@@ -219,47 +200,6 @@ WeeklyEvent acts as a template that generates Event instances:
 
 **No logic in `__init__.py`:** All logic lives in dedicated modules. `__init__.py` files are re-exports only.
 
-## API Endpoints
-
-**Users:**
-- `POST /api/users/registration` - register new user
-- `POST /api/users/login` - login, returns JWT
-- `GET /api/users/me` - get own profile (auth required)
-- `PATCH /api/users/` - update profile (auth required)
-- `PATCH /api/users/attach_uid` - link RFID uid to account (auth required)
-
-**Events:**
-- `GET /api/events?start=&end=` - list events in date range
-- `GET /api/events/{id}` - get single event
-- `POST /api/events` - create event (auth required)
-- `POST /api/events/take/{event_id}` - claim event as trainer (auth required)
-
-**WeeklyEvents:**
-- `GET /api/weekly` - list recurring event templates
-- `GET /api/weekly/{id}` - get single template
-- `POST /api/weekly` - create recurring event (generates Events)
-- `PUT /api/weekly/{id}` - update template
-- `DELETE /api/weekly/{id}` - delete template (cascades future Events)
-
-**Schedule:**
-- `GET /api/schedule?start=&end=` - list weekly events active in date range (for timetable view)
-
-**Visits:**
-- `GET /api/visits/me` - get own visit history (auth required, pagination: limit/offset)
-
-**Payments:**
-- `GET /api/payments/balance` - get own balance (auth required)
-- `POST /api/payments/balance` - add payment entry (trainer only, auth required)
-- `DELETE /api/payments/payment/{id}` - delete payment entry (auth required)
-- `GET /api/payments/payment_history` - get own payment history (auth required)
-
-**ESP32:**
-- `POST /api/esp` - bulk CSV sync (body: CSV rows of `timestamp,uid`)
-- `GET /api/esp/available` - UIDs with no linked user, returns `dict[str, datetime]`
-
-**Health:**
-- `GET /health` - liveness check
-
 ## Frontend Architecture
 
 **React SPA** (Vite + MUI), served from `frontend/dist/` by FastAPI.
@@ -270,34 +210,8 @@ WeeklyEvent acts as a template that generates Event instances:
 - Routes: `/login`, `/register`, `/` (CalendarPage), `/calendar/:monday`, `/profile`, `/history`
 - CORS: FastAPI allows `http://localhost:5173` explicitly
 
-## Configuration
-
-```python
-# .env file (required)
-DB_URI=postgresql+asyncpg://user:pass@host/db
-SECRET_KEY=<random secret>
-
-# Optional (have defaults)
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours
-```
-
 ## Security
 
 - Passwords hashed with Argon2 (`pwdlib`)
 - JWT tokens, 24h expiry
 - `oauth2_scheme` dependency verifies token + checks user exists
-- RFID UIDs stored as plain strings (no encryption needed)
-
-## Performance Optimization
-
-- Indexes on: `users.rfid_uid`, `events.date`, `visits.user_id`, `visits.event_id`
-- Use async/await for all DB operations
-- Bulk inserts via `sa.insert().values(items)` for ESP sync
-
-## Deployment (future)
-
-- PostgreSQL container
-- FastAPI serves both API and built React SPA
-- Reverse proxy (nginx) for HTTPS
-- ESP32 connects to public API endpoint
