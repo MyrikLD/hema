@@ -1,6 +1,5 @@
-import io
 from typing import Annotated
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,8 +89,8 @@ async def user_loggin_in(
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/me/qr")
+@router.get("/qr")
 async def get_qr(user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)):
     service = UserService(session)
     qr = await service.qr_gen(user_id=user_id)
-    return StreamingResponse(io.BytesIO(qr), media_type="image/png")
+    return Response(content=qr, media_type="image/svg+xml")

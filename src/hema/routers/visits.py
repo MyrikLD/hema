@@ -5,7 +5,6 @@ from hema.auth import oauth2_scheme
 from hema.db import db
 from hema.schemas.visits import VisitResponse, VisitMarkPostSchema, VisitMarkResponseSchema
 from hema.services.visit_service import VisitService
-from hema.services.user_service import UserService
 
 router = APIRouter(prefix="/visits", tags=["Visits"])
 
@@ -27,12 +26,8 @@ async def post_visit(
     session: AsyncSession = Depends(db.get_db),
     trainer_id: int = Depends(oauth2_scheme),
 ) -> dict:
-    user_service = UserService(session)
     visit_service = VisitService(session)
     visit_data = await visit_service.mark_visit(data=data, trainer_id=trainer_id)
     if visit_data["status"] == "forbidden":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your event")
-    if visit_data["status"] == "already_marked":
-        return visit_data
-    user_data = await user_service.get_by_id(user_id=data.user_id)
-    return {**visit_data, "name": user_data["username"]}
+    return visit_data

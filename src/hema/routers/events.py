@@ -28,7 +28,7 @@ async def get_active_events(
     session: AsyncSession = Depends(db.get_db), trainer_id: int = Depends(oauth2_scheme)
 ):
     service = EventService(session)
-    nearest_events = await service.check_event_time(trainer_id)
+    nearest_events = await service.get_active_events(trainer_id)
     return nearest_events
 
 

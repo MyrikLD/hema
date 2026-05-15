@@ -55,7 +55,7 @@ class EventService:
         await self.session.execute(q)
         return await self.by_id(event_id)
 
-    async def check_event_time(self, trainer_id: int) -> list[EventResponse]:
+    async def get_active_events(self, trainer_id: int) -> list[EventResponse]:
         now = datetime.now()
         now_time = now.time()
         future_time = (now + timedelta(minutes=30)).time()
