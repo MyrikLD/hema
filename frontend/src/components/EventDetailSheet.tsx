@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   SwipeableDrawer,
@@ -6,10 +7,12 @@ import {
   Divider,
   IconButton,
   Tooltip,
+  Button,
 } from '@mui/material';
-import { CalendarMonth } from '@mui/icons-material';
+import { CalendarMonth, QrCodeScanner } from '@mui/icons-material';
 import type { Event } from '../types';
 import { exportEvent } from '../utils/ics';
+import { useAuth } from '../contexts/AuthContext';
 import SignUpButton from './SignUpButton';
 import AttendeeList from './AttendeeList';
 
@@ -34,8 +37,15 @@ function formatDateTime(dateStr: string, timeStr: string): string {
 
 export default function EventDetailSheet({ event, open, onClose, onOpen }: EventDetailSheetProps) {
   const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (!event) return null;
+
+  const isTrainer =
+    user?.name != null &&
+    event.trainer_name != null &&
+    user.name === event.trainer_name;
 
   return (
     <SwipeableDrawer
@@ -88,6 +98,22 @@ export default function EventDetailSheet({ event, open, onClose, onOpen }: Event
       </Typography>
 
       <Divider sx={{ my: 2 }} />
+
+      {isTrainer && (
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<QrCodeScanner />}
+          fullWidth
+          sx={{ mt: 1 }}
+          onClick={() => {
+            onClose();
+            navigate(`/scanner?event_id=${event.id}`);
+          }}
+        >
+          Сканировать
+        </Button>
+      )}
 
       <SignUpButton eventId={event.id} onToggle={() => setRefreshKey((k) => k + 1)} />
 

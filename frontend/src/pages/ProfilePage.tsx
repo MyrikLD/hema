@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -14,7 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { updateProfile } from '../api/auth';
 
 export default function ProfilePage() {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, token, logout, refreshUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [gender, setGender] = useState<string>(user?.gender || 'o');
@@ -22,6 +22,25 @@ export default function ProfilePage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const qrUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/users/qr', { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        qrUrlRef.current = url;
+        setQrUrl(url);
+      })
+      .catch(() => {});
+
+    return () => {
+      if (qrUrlRef.current) URL.revokeObjectURL(qrUrlRef.current);
+    };
+  }, [token]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +139,23 @@ export default function ProfilePage() {
           </Box>
 
           <Divider sx={{ my: 3 }} />
+
+          {qrUrl && (
+            <>
+              <Typography variant="subtitle2" gutterBottom>
+                Your QR code
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Box
+                  component="img"
+                  src={qrUrl}
+                  alt="QR code"
+                  sx={{ width: 180, height: 180 }}
+                />
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+            </>
+          )}
 
           <Button
             variant="outlined"

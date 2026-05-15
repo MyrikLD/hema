@@ -10,6 +10,7 @@ import RegisterPage from './pages/RegisterPage';
 import CalendarPage from './pages/CalendarPage';
 import ProfilePage from './pages/ProfilePage';
 import HistoryPage from './pages/HistoryPage';
+import ScannerPage from './pages/ScannerPage';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/calendar/:monday" element={<CalendarPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/history" element={<HistoryPage />} />
+              <Route path="/scanner" element={<ScannerPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
