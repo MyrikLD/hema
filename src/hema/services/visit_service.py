@@ -44,7 +44,7 @@ class VisitService:
             raise NotATrainerError()
 
         existing = await self.db.scalar(
-            sa.select(VisitModel.id).where(
+            sa.select(VisitModel.user_id).where(
                 VisitModel.user_id == data.user_id,
                 VisitModel.event_id == data.event_id,
             )
