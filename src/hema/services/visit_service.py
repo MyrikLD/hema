@@ -29,15 +29,21 @@ class VisitService:
         return list((await self.db.execute(q)).mappings().all())
 
     async def mark_visit(self, data: VisitMarkPostSchema, trainer_id: int) -> dict:
-        q_check = sa.select(EventModel.trainer_id, EventModel.name).where(
-            EventModel.id == data.event_id
+        q = (
+            sa.select(
+                EventModel.trainer_id,
+                EventModel.name.label("event_name"),
+                UserModel.username,
+            )
+            .select_from(EventModel)
+            .outerjoin(UserModel, UserModel.id == data.user_id)
+            .where(EventModel.id == data.event_id)
         )
-        event_row = (await self.db.execute(q_check)).mappings().first()
-        if event_row["trainer_id"] != trainer_id:
+        row = (await self.db.execute(q)).mappings().first()
+        if not row:
             raise NotATrainerError()
-        username = await self.db.scalar(
-            sa.select(UserModel.username).where(UserModel.id == data.user_id)
-        )
+        if row["trainer_id"] != trainer_id:
+            raise NotATrainerError()
         q_insert = (
             sa.insert(VisitModel)
             .values(user_id=data.user_id, event_id=data.event_id, uid=str(data.user_id))
@@ -46,10 +52,10 @@ class VisitService:
         try:
             timestamp = await self.db.scalar(q_insert)
         except IntegrityError:
-            raise AlreadyMarkedError(username=username)
+            raise AlreadyMarkedError(username=row["username"])
         return {
             "status": "marked",
             "timestamp": timestamp,
-            "event_name": event_row["name"],
-            "username": username,
+            "event_name": row["event_name"],
+            "username": row["username"],
         }

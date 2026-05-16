@@ -2,11 +2,9 @@
 
 from fastapi import APIRouter
 
-from .esp import router as esp_router
 from .events import router as events_router
 from .intentions import router as intentions_router
 from .payments import router as payment_router
-
 from .schedule import router as schedule_router
 from .users import router as users_router
 from .visits import router as visits_router
@@ -17,7 +15,6 @@ api_router.include_router(schedule_router)
 api_router.include_router(events_router)
 api_router.include_router(weekly_events_router)
 api_router.include_router(users_router)
-api_router.include_router(esp_router)
 api_router.include_router(intentions_router)
 api_router.include_router(visits_router)
 api_router.include_router(payment_router)

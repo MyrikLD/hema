@@ -14,4 +14,3 @@ class UserModel(Base):
 
     gender = sa.Column(sa.String(), nullable=True, default=UserGender.OTHER)
 
-    rfid_uid = sa.Column(sa.String(), nullable=True, unique=True)

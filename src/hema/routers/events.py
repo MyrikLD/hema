@@ -24,15 +24,6 @@ async def list_events(
     return await service.list_events(start, end)
 
 
-@router.get("/get_active_events", response_model=list[EventResponse])
-async def get_active_events(
-    session: AsyncSession = Depends(db.get_db), trainer_id: int = Depends(oauth2_scheme)
-):
-    service = EventService(session)
-    nearest_events = await service.get_active_events(trainer_id)
-    return nearest_events
-
-
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(
     event_id: int,

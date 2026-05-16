@@ -1,4 +1,3 @@
-import io
 from io import BytesIO
 
 import qrcode
@@ -6,7 +5,7 @@ import qrcode.image.svg
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from hema.auth import password_hashing
-from hema.models import UserModel, VisitModel
+from hema.models import UserModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
 
@@ -53,25 +52,6 @@ class UserService:
             .returning(*UserModel.__table__.c)
         )
         return (await self.db.execute(q)).mappings().first()
-
-    async def attach_uid(self, user_id: int, uid: str) -> dict | None:
-        q = (
-            sa.update(UserModel)
-            .where(UserModel.id == user_id)
-            .values({UserModel.rfid_uid.name: uid})
-            .returning(*UserModel.__table__.c)
-        )
-        r = (await self.db.execute(q)).mappings().first()
-
-        q = (
-            sa.update(VisitModel)
-            .where(VisitModel.uid == uid)
-            .where(VisitModel.user_id.is_(None))
-            .values({VisitModel.user_id: user_id})
-        )
-        await self.db.execute(q)
-
-        return r
 
     def qr_gen(self, user_id: int) -> bytes:
         factory = qrcode.image.svg.SvgPathImage

@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,16 +58,3 @@ class EventService:
         )
         await self.session.execute(q)
         return await self.by_id(event_id)
-
-    async def get_active_events(self, trainer_id: int) -> list[EventResponse]:
-        now = datetime.now()
-        now_time = now.time()
-        future_time = (now + timedelta(minutes=30)).time()
-        q = sa.select(*EventModel.__table__.c).where(
-            EventModel.date == date.today(),
-            EventModel.time_start <= future_time,
-            EventModel.time_end > now_time,
-            EventModel.trainer_id == trainer_id,
-        )
-        result = (await self.session.execute(q)).mappings().all()
-        return list(map(EventResponse.model_validate, result))

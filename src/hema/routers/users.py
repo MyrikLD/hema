@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi.responses import Response
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,19 +51,6 @@ async def update_user_profile(
 ):
     service = UserService(session)
     user_profile = await service.update_user_profile(user_id=user_id, update_data=update_data)
-    if not user_profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user_profile
-
-
-@router.patch("/attach_uid", response_model=UserResponseSchema)
-async def update_user_profile(
-    uid: str = Body(..., embed=True),
-    session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(oauth2_scheme),
-):
-    service = UserService(session)
-    user_profile = await service.attach_uid(user_id=user_id, uid=uid)
     if not user_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user_profile
