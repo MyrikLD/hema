@@ -7,7 +7,7 @@ dependencies = [
     "alembic>=1.17.2",
     "alembic-autogen-check>=1.1.1",
     "asyncpg>=0.31.0",
-    "black>=25.12.0",
+    "ruff>=0.11.0",
     "fastapi>=0.128.0",
     "python-multipart",
     "jinja2>=3.1.6",
@@ -31,15 +31,13 @@ packages = ["src/hema"]
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.black]
-target-version = ['py312']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | .venv
-  | alembic
-  | data
-)
-'''
+[tool.ruff]
+target-version = "py312"
 line-length = 100
+exclude = [".git", ".venv", "migrations", "data"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+docstring-code-format = false

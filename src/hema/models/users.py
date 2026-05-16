@@ -13,4 +13,3 @@ class UserModel(Base):
     phone = sa.Column(sa.String(), nullable=True, unique=True)
 
     gender = sa.Column(sa.String(), nullable=True, default=UserGender.OTHER)
-

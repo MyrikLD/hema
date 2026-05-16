@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import time
 
 from pydantic import BaseModel, ConfigDict, Field
 

@@ -36,9 +36,7 @@ api.add_middleware(
 )
 
 # Mount static files
-api.mount(
-    "/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static"
-)
+api.mount("/static", StaticFiles(directory=str(settings.ROOT / "static")), name="static")
 
 # Serve frontend build assets if available
 FRONTEND_DIST = settings.ROOT / "frontend" / "dist"

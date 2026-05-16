@@ -34,7 +34,9 @@ async def get_weekly_event(
 ):
     weekly_event = await WeeklyEventService(session).get_weekly_event(weekly_event_id)
     if not weekly_event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found"
+        )
     return weekly_event
 
 
@@ -55,7 +57,9 @@ async def update_weekly_event(
 ):
     weekly_event = await WeeklyEventService(session).update_weekly_event(weekly_event_id, data)
     if not weekly_event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found"
+        )
     return weekly_event
 
 
@@ -66,4 +70,6 @@ async def delete_weekly_event(
 ):
     deleted = await WeeklyEventService(session).delete_weekly_event(weekly_event_id)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"WeeklyEvent {weekly_event_id} not found"
+        )
