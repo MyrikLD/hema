@@ -39,6 +39,7 @@ RUN useradd \
     app
 
 ENV ROOT=/app
+ENV DOCKER=1
 
 COPY --from=builder /venv /venv
 COPY static/ /app/static/

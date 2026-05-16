@@ -37,21 +37,19 @@ export default function ScannerPage() {
 
   const eventIdParam = searchParams.get('event_id');
 
+  const initialEventId = eventIdParam ? parseInt(eventIdParam) : '';
+
   const [events, setEvents] = useState<Event[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
+  const [selectedEventId, setSelectedEventId] = useState<number | ''>(initialEventId);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
 
-  const selectedEventIdRef = useRef<number | null>(null);
+  const selectedEventIdRef = useRef<number | null>(typeof initialEventId === 'number' ? initialEventId : null);
   const lastScannedRef = useRef<{ qr: string; time: number } | null>(null);
   const notifTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Refs for sequencing scanner lifecycle across StrictMode double-invocation.
-  // pendingRef holds the tail of the promise chain; every start and every cleanup
-  // appends to this chain, guaranteeing stop() always finishes before the next
-  // start() begins, even when the async stop() overlaps with the remount.
   const qrRef = useRef<Html5Qrcode | null>(null);
   const pendingRef = useRef<Promise<void>>(Promise.resolve());
 
@@ -63,15 +61,13 @@ export default function ScannerPage() {
   // Fetch events
   useEffect(() => {
     if (eventIdParam) {
-      const id = parseInt(eventIdParam);
-      setSelectedEventId(id);
-      selectedEventIdRef.current = id;
-      get<Event>(`/events/${id}`)
+      get<Event>(`/events/${eventIdParam}`)
         .then((e) => setEvents([e]))
         .catch(() => {})
         .finally(() => setLoadingEvents(false));
     } else {
-      get<Event[]>('/events/get_active_events')
+      const today = new Date().toISOString().slice(0, 10);
+      get<Event[]>(`/events?start=${today}&end=${today}`)
         .then((data) => {
           setEvents(data);
           if (data.length === 1) setSelectedEventId(data[0].id);
@@ -111,32 +107,31 @@ export default function ScannerPage() {
         ) return;
         lastScannedRef.current = { qr: decodedText, time: now };
 
-        const match = decodedText.match(/\/students\/(\d+)/);
-        if (!match) return;
-        const userId = parseInt(match[1]);
+        let userId: number;
+        try {
+          const payload = JSON.parse(decodedText);
+          if (typeof payload?.user_id !== 'number') return;
+          userId = payload.user_id;
+        } catch {
+          return;
+        }
 
         try {
-          type QrResp = { status: string; username?: string; name?: string };
-          const result = await post<QrResp>('/visits/qr_visit', {
-            user_id: userId,
-            event_id: eventId,
-          });
-          const displayName = result.name || result.username || 'Unknown';
-
-          if (result.status === 'marked') {
-            showNotif('success', [displayName, 'Checked in']);
-          } else if (result.status === 'already_marked') {
-            showNotif('warning', [displayName, 'Already checked in']);
-          } else {
-            showNotif('error', ['Unexpected response']);
-          }
+          await post<void>('/visits/qr_visit', { user_id: userId, event_id: eventId });
+          const user = await get<{ name: string | null; username: string }>(`/users/${userId}`);
+          showNotif('success', [user.name || user.username, 'Checked in']);
         } catch (err) {
-          showNotif(
-            'error',
-            err instanceof ApiError && err.status === 403
-              ? ['Access denied']
-              : ['Request failed'],
-          );
+          if (err instanceof ApiError && err.status === 409) {
+            const user = await get<{ name: string | null; username: string }>(`/users/${userId}`).catch(() => null);
+            showNotif('warning', [user?.name || user?.username || 'Unknown', 'Already checked in']);
+          } else {
+            showNotif(
+              'error',
+              err instanceof ApiError && err.status === 403
+                ? ['Access denied']
+                : ['Request failed'],
+            );
+          }
         }
       };
 
@@ -172,7 +167,7 @@ export default function ScannerPage() {
         }
       });
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(
     () => () => {

@@ -21,7 +21,7 @@ class PaymentService:
         )
         return (await self.db.execute(q)).mappings().first()
 
-    async def get_user_payment_history(self, user_id: int) -> list[dict] | None:
+    async def get_user_payment_history(self, user_id: int) -> list[dict]:
         q = sa.select(*UserPaymentHistory.__table__.c).where(UserPaymentHistory.user_id == user_id)
         return (await self.db.execute(q)).mappings().all()
 

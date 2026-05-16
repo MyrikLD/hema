@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import oauth2_scheme
-from hema.db import db
+from hema.db import SessionDep
 from hema.schemas.intentions import IntentionCreate, IntentionResponse
 from hema.services.intention_service import IntentionService
 
@@ -12,7 +11,7 @@ router = APIRouter(prefix="/intentions", tags=["Intentions"])
 @router.post("", response_model=IntentionResponse, status_code=status.HTTP_201_CREATED)
 async def create_intention(
     data: IntentionCreate,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
     user_id: int = Depends(oauth2_scheme),
 ):
     service = IntentionService(session)
@@ -28,7 +27,7 @@ async def create_intention(
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_intention(
     event_id: int,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
     user_id: int = Depends(oauth2_scheme),
 ):
     service = IntentionService(session)
@@ -43,7 +42,7 @@ async def delete_intention(
 @router.get("/event/{event_id}")
 async def get_event_attendees(
     event_id: int,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
 ):
     service = IntentionService(session)
     return await service.get_for_event(event_id)
@@ -52,7 +51,7 @@ async def get_event_attendees(
 @router.get("/me/{event_id}")
 async def check_my_intention(
     event_id: int,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
     user_id: int = Depends(oauth2_scheme),
 ):
     service = IntentionService(session)

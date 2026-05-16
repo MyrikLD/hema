@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+from os import environ
 
+import sentry_sdk
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +12,14 @@ from hema.config import settings
 from hema.db import db
 from hema.routers import api_router
 from hema.services.weekly_event_service import WeeklyEventService
+
+if settings.SENTRY_DSN is not None:
+    docker = bool(environ.get("DOCKER") or False)
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        send_default_pii=True,
+        environment="docker" if docker else "local",
+    )
 
 
 @asynccontextmanager

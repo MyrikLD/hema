@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.db import db
-from hema.auth import oauth2_scheme
+from hema.auth import TrainerIdDep, UserIdDep
+from hema.db import SessionDep
 from hema.schemas.payments import (
     PaymentResponseSchema,
     PaymentUpdateSchema,
@@ -15,7 +14,8 @@ router = APIRouter(prefix="/payments", tags=["Payments"])
 
 @router.get("/balance", response_model=int)
 async def get_user_balance(
-    user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)
+    user_id: UserIdDep,
+    session: SessionDep,
 ):
     service = PaymentService(session)
     try:
@@ -30,8 +30,8 @@ async def get_user_balance(
 @router.post("/balance", response_model=PaymentResponseSchema)
 async def update_user_balance(
     data: PaymentUpdateSchema,
-    session: AsyncSession = Depends(db.get_db),
-    trainer_id: int = Depends(oauth2_scheme),
+    session: SessionDep,
+    trainer_id: UserIdDep,
 ):
     service = PaymentService(session)
     try:
@@ -41,11 +41,10 @@ async def update_user_balance(
     return update
 
 
-@router.delete("/payment/{payment_id}", response_model=int)
+@router.delete("/payment/{payment_id}", response_model=int, dependencies=[TrainerIdDep])
 async def delete_user_payment(
     payment_id: int,
-    trainer_id: int = Depends(oauth2_scheme),
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
 ) -> int | None:
     service = PaymentService(session)
     try:
@@ -59,7 +58,8 @@ async def delete_user_payment(
 
 @router.get("/payment_history", response_model=list[PaymentResponseSchema])
 async def get_user_payment_history(
-    user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)
+    user_id: UserIdDep,
+    session: SessionDep,
 ) -> list:
     service = PaymentService(session)
     history = await service.get_user_payment_history(user_id=user_id)

@@ -1,10 +1,9 @@
 from datetime import date
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Query
 
-from hema.db import db
+from hema.db import SessionDep
 from hema.models.users import UserModel
 from hema.models.weekly_events import WeeklyEventModel
 from hema.schemas.schedule import ScheduleEntry
@@ -14,9 +13,9 @@ router = APIRouter(prefix="/schedule", tags=["Schedule"])
 
 @router.get("", response_model=list[ScheduleEntry])
 async def get_schedule(
+    session: SessionDep,
     start: date = Query(default_factory=date.today),
     end: date = Query(default_factory=date.today),
-    session: AsyncSession = Depends(db.get_db),
 ):
     q = (
         sa.select(

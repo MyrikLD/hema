@@ -1,12 +1,13 @@
 """Basic authentication dependencies for API routes."""
 
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import jwt
 import sqlalchemy as sa
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jwt import algorithms, PyJWTError
+from jwt import PyJWTError, algorithms
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,7 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 
 from hema.config import settings
 from hema.db import db
-from hema.models import UserModel
+from hema.models import TrainerModel, UserModel
 
 password_hash = PasswordHash((Argon2Hasher(),))
 
@@ -47,8 +48,18 @@ class OAuthPasswordBearer(OAuth2PasswordBearer):
         q = sa.select(UserModel.id).where(UserModel.id == user_id)
         user_id = await session.scalar(q)
         if not user_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not found")
         return user_id
+
+    async def trainer(self, request: Request, session: AsyncSession = Depends(db.get_db)) -> int:
+        user_id = await self(request, session)
+        q = sa.select(TrainerModel.id).where(TrainerModel.id == user_id)
+        trainer_id = await session.scalar(q)
+
+        if not trainer_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Trainer not found")
+
+        return trainer_id
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -68,3 +79,6 @@ def create_jwt_token(data: dict) -> str:
 
 
 oauth2_scheme = OAuthPasswordBearer(token_url="/api/users/login")
+
+UserIdDep = Annotated[int, Depends(oauth2_scheme)]
+TrainerIdDep = Annotated[int, Depends(oauth2_scheme.trainer)]

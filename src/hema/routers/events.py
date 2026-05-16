@@ -2,12 +2,10 @@
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Query, status
 
-from hema.auth import oauth2_scheme
-from hema.db import db
-from hema.exceptions import NotATrainerError
+from hema.auth import TrainerIdDep
+from hema.db import SessionDep
 from hema.schemas.events import EventCreateSchema, EventResponse
 from hema.services.event import EventService
 
@@ -16,9 +14,9 @@ router = APIRouter(prefix="/events", tags=["Events"])
 
 @router.get("", response_model=list[EventResponse])
 async def list_events(
+    session: SessionDep,
     start: date = Query(default_factory=date.today),
     end: date = Query(default_factory=date.today),
-    session: AsyncSession = Depends(db.get_db),
 ):
     service = EventService(session)
     return await service.list_events(start, end)
@@ -27,7 +25,7 @@ async def list_events(
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(
     event_id: int,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
 ):
     service = EventService(session)
     event_response = await service.by_id(event_id)
@@ -43,22 +41,21 @@ async def get_event(
 @router.post("", response_model=EventResponse)
 async def create_event(
     event_data: EventCreateSchema,
-    session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(oauth2_scheme),
+    session: SessionDep,
+    user_id: TrainerIdDep,
 ):
     service = EventService(session)
 
-    try:
-        return await service.create(event_data, user_id)
-    except NotATrainerError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You must be a trainer")
+    event = await service.create(event_data, user_id)
+
+    return event
 
 
 @router.post("/take/{event_id}", response_model=EventResponse)
 async def take_event(
     event_id: int,
-    session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(oauth2_scheme),
+    session: SessionDep,
+    user_id: TrainerIdDep,
 ):
     service = EventService(session)
 

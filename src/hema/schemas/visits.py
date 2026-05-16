@@ -16,10 +16,3 @@ class VisitResponse(BaseModel):
 class VisitMarkPostSchema(BaseModel):
     user_id: int
     event_id: int
-
-
-class VisitMarkResponseSchema(BaseModel):
-    status: str
-    username: str | None = None
-    name: str | None = None
-    timestamp: datetime | None = None

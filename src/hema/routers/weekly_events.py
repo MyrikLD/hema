@@ -1,12 +1,9 @@
-"""API routes for WeeklyEvent (recurring events) management."""
-
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import oauth2_scheme
-from hema.db import db
+from hema.db import SessionDep
 from hema.schemas.weekly_events import (
     WeeklyEventCreate,
     WeeklyEventResponse,
@@ -19,9 +16,9 @@ router = APIRouter(prefix="/weekly", tags=["Weekly Events"])
 
 @router.get("", response_model=list[WeeklyEventResponse])
 async def list_weekly_events(
+    session: SessionDep,
     start: date | None = Query(default=None),
     end: date | None = Query(default=None),
-    session: AsyncSession = Depends(db.get_db),
 ):
     weekly_events = await WeeklyEventService(session).list_weekly_events(start, end)
     return [WeeklyEventResponse.model_validate(we) for we in weekly_events]
@@ -30,7 +27,7 @@ async def list_weekly_events(
 @router.get("/{weekly_event_id}", response_model=WeeklyEventResponse)
 async def get_weekly_event(
     weekly_event_id: int,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
 ):
     weekly_event = await WeeklyEventService(session).get_weekly_event(weekly_event_id)
     if not weekly_event:
@@ -43,7 +40,7 @@ async def get_weekly_event(
 @router.post("", response_model=WeeklyEventResponse, status_code=status.HTTP_201_CREATED)
 async def create_weekly_event(
     data: WeeklyEventCreate,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
     user_id: int = Depends(oauth2_scheme),
 ):
     return await WeeklyEventService(session).create_weekly_event(data, user_id)
@@ -53,7 +50,7 @@ async def create_weekly_event(
 async def update_weekly_event(
     weekly_event_id: int,
     data: WeeklyEventUpdate,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
 ):
     weekly_event = await WeeklyEventService(session).update_weekly_event(weekly_event_id, data)
     if not weekly_event:
@@ -66,7 +63,7 @@ async def update_weekly_event(
 @router.delete("/{weekly_event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_weekly_event(
     weekly_event_id: int,
-    session: AsyncSession = Depends(db.get_db),
+    session: SessionDep,
 ):
     deleted = await WeeklyEventService(session).delete_weekly_event(weekly_event_id)
     if not deleted:

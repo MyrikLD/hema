@@ -1,9 +1,13 @@
+import json
 from io import BytesIO
 
 import qrcode
 import qrcode.image.svg
 import sqlalchemy as sa
+from qrcode import QRCode
+from qrcode.constants import ERROR_CORRECT_H
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from hema.auth import password_hashing
 from hema.models import UserModel
 from hema.models.trainers import TrainerModel
@@ -58,11 +62,12 @@ class UserService:
         )
         return (await self.db.execute(q)).mappings().first()
 
-    def qr_gen(self, user_id: int) -> bytes:
-        factory = qrcode.image.svg.SvgPathImage
-        image = qrcode.make(f"http://localhost:8000/students/{user_id}", image_factory=factory)
-        buffer = BytesIO()
-        image.save(buffer)
-        result = buffer.getvalue()
-        buffer.close()
-        return result
+    @staticmethod
+    def qr_gen(user_id: int) -> bytes:
+        qr = QRCode(error_correction=ERROR_CORRECT_H)
+        qr.add_data(json.dumps({"user_id": user_id}))
+        image = qr.make_image(image_factory=qrcode.image.svg.SvgPathImage)
+
+        with BytesIO() as buffer:
+            image.save(buffer)
+            return buffer.getvalue()

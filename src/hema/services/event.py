@@ -2,8 +2,7 @@ from datetime import date
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
-from hema.exceptions import NotATrainerError
-from sqlalchemy.exc import IntegrityError
+
 from hema.models import EventModel
 from hema.models.users import UserModel
 from hema.schemas.events import EventCreateSchema, EventResponse
@@ -34,21 +33,18 @@ class EventService:
         return list(map(EventResponse.model_validate, r))
 
     async def create(self, event_data: EventCreateSchema, user_id: int) -> EventResponse:
-        try:
-            q = (
-                sa.insert(EventModel)
-                .values(
-                    {
-                        EventModel.trainer_id.name: user_id,
-                        **event_data.model_dump(),
-                    }
-                )
-                .returning(EventModel.id)
+        q = (
+            sa.insert(EventModel)
+            .values(
+                {
+                    EventModel.trainer_id.name: user_id,
+                    **event_data.model_dump(),
+                }
             )
-            event_id = await self.session.scalar(q)
-            return await self.by_id(event_id)  # type: ignore[arg-type]
-        except IntegrityError:
-            raise NotATrainerError()
+            .returning(EventModel.id)
+        )
+        event_id = await self.session.scalar(q)
+        return await self.by_id(event_id)  # type: ignore[arg-type]
 
     async def set_trainer(self, event_id: int, user_id: int):
         q = (

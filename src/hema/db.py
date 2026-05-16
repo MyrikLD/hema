@@ -1,10 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import Annotated
 
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import (
-    async_sessionmaker,
     AsyncEngine,
     AsyncSession,
+    async_sessionmaker,
     create_async_engine,
 )
 
@@ -41,3 +43,5 @@ class Database:
 
 # Create a single instance
 db = Database(settings.DB_URI)
+
+SessionDep = Annotated[AsyncSession, Depends(db.get_db)]

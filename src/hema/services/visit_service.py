@@ -1,8 +1,7 @@
-from hema.exceptions import AlreadyMarkedError, NotATrainerError
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
-from hema.models import EventModel, VisitModel, UserModel
-from hema.schemas.visits import VisitMarkPostSchema
+
+from hema.models import EventModel, VisitModel
 
 
 class VisitService:
@@ -26,41 +25,13 @@ class VisitService:
         )
         return list((await self.db.execute(q)).mappings().all())
 
-    async def mark_visit(self, data: VisitMarkPostSchema, trainer_id: int) -> dict:
-        q = (
-            sa.select(
-                EventModel.trainer_id,
-                EventModel.name.label("event_name"),
-                UserModel.username,
-            )
-            .select_from(EventModel)
-            .outerjoin(UserModel, UserModel.id == data.user_id)
-            .where(EventModel.id == data.event_id)
+    async def mark_visit(self, user_id: int, event_id: int, trainer_id: int) -> None:
+        q = sa.insert(VisitModel).values(
+            {
+                VisitModel.user_id: user_id,
+                VisitModel.event_id: event_id,
+                VisitModel.trainer_id: trainer_id,
+            }
         )
-        row = (await self.db.execute(q)).mappings().first()
-        if not row:
-            raise NotATrainerError()
-        if row["trainer_id"] != trainer_id:
-            raise NotATrainerError()
 
-        existing = await self.db.scalar(
-            sa.select(VisitModel.user_id).where(
-                VisitModel.user_id == data.user_id,
-                VisitModel.event_id == data.event_id,
-            )
-        )
-        if existing:
-            raise AlreadyMarkedError(username=row["username"])
-
-        q_insert = (
-            sa.insert(VisitModel)
-            .values(user_id=data.user_id, event_id=data.event_id)
-            .returning(VisitModel.timestamp)
-        )
-        timestamp = await self.db.scalar(q_insert)
-        return {
-            "status": "marked",
-            "timestamp": timestamp,
-            "event_name": row["event_name"],
-            "username": row["username"],
-        }
+        await self.db.execute(q)
