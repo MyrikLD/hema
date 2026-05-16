@@ -2,7 +2,8 @@ from datetime import date
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from hema.exceptions import NotATrainerError
+from sqlalchemy.exc import IntegrityError
 from hema.models import EventModel
 from hema.models.users import UserModel
 from hema.schemas.events import EventCreateSchema, EventResponse
@@ -13,9 +14,8 @@ class EventService:
         self.session = session
 
     def _with_trainer(self):
-        return (
-            sa.select(*EventModel.__table__.c, UserModel.name.label("trainer_name"))
-            .outerjoin(UserModel, EventModel.trainer_id == UserModel.id)
+        return sa.select(*EventModel.__table__.c, UserModel.name.label("trainer_name")).outerjoin(
+            UserModel, EventModel.trainer_id == UserModel.id
         )
 
     async def by_id(self, event_id: int) -> EventResponse:
@@ -26,11 +26,7 @@ class EventService:
     async def list_events(
         self, start: date, end: date, trainer_id: int | None = None
     ) -> list[EventResponse]:
-        q = (
-            self._with_trainer()
-            .where(EventModel.date >= start)
-            .where(EventModel.date <= end)
-        )
+        q = self._with_trainer().where(EventModel.date >= start).where(EventModel.date <= end)
         if trainer_id:
             q = q.where(EventModel.trainer_id == trainer_id)
 
@@ -38,18 +34,21 @@ class EventService:
         return list(map(EventResponse.model_validate, r))
 
     async def create(self, event_data: EventCreateSchema, user_id: int) -> EventResponse:
-        q = (
-            sa.insert(EventModel)
-            .values(
-                {
-                    EventModel.trainer_id.name: user_id,
-                    **event_data.model_dump(),
-                }
+        try:
+            q = (
+                sa.insert(EventModel)
+                .values(
+                    {
+                        EventModel.trainer_id.name: user_id,
+                        **event_data.model_dump(),
+                    }
+                )
+                .returning(EventModel.id)
             )
-            .returning(EventModel.id)
-        )
-        event_id = await self.session.scalar(q)
-        return await self.by_id(event_id)  # type: ignore[arg-type]
+            event_id = await self.session.scalar(q)
+            return await self.by_id(event_id)  # type: ignore[arg-type]
+        except IntegrityError:
+            raise NotATrainerError()
 
     async def set_trainer(self, event_id: int, user_id: int):
         q = (

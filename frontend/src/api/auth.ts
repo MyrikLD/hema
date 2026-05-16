@@ -42,6 +42,7 @@ export async function getMe(): Promise<User> {
 }
 
 export async function updateProfile(data: {
+  username?: string;
   name?: string;
   phone?: string;
   gender?: string;

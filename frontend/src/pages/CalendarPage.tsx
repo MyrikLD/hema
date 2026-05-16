@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, IconButton, Typography, CircularProgress, Tooltip } from '@mui/material';
-import { ChevronLeft, ChevronRight, CalendarMonth } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, CalendarMonth, Add } from '@mui/icons-material';
 import type { Event } from '../types';
 import { get } from '../api/client';
 import { exportEvents } from '../utils/ics';
 import CalendarGrid from '../components/CalendarGrid';
 import EventDetailSheet from '../components/EventDetailSheet';
+import CreateEventDialog from '../components/CreateEventDialog';
 
 function getMondayOf(d: Date): Date {
   const day = d.getDay();
@@ -49,6 +50,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -84,6 +86,11 @@ export default function CalendarPage() {
           {formatWeekTitle(monday)}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="New event">
+            <IconButton size="small" onClick={() => setCreateOpen(true)}>
+              <Add fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Экспорт недели (.ics)">
             <span>
               <IconButton
@@ -118,6 +125,13 @@ export default function CalendarPage() {
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         onOpen={() => setSheetOpen(true)}
+      />
+
+      <CreateEventDialog
+        open={createOpen}
+        defaultDate={mondayStr}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => { setCreateOpen(false); fetchData(); }}
       />
     </Box>
   );

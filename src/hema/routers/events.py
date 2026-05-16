@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.auth import oauth2_scheme
 from hema.db import db
+from hema.exceptions import NotATrainerError
 from hema.schemas.events import EventCreateSchema, EventResponse
 from hema.services.event import EventService
 
@@ -47,9 +48,10 @@ async def create_event(
 ):
     service = EventService(session)
 
-    event_response = await service.create(event_data, user_id)
-
-    return event_response
+    try:
+        return await service.create(event_data, user_id)
+    except NotATrainerError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You must be a trainer")
 
 
 @router.post("/take/{event_id}", response_model=EventResponse)

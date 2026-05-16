@@ -1,6 +1,6 @@
 from typing import Annotated
-
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,19 +56,6 @@ async def update_user_profile(
     return user_profile
 
 
-@router.patch("/attach_uid", response_model=UserResponseSchema)
-async def update_user_profile(
-    uid: str = Body(..., embed=True),
-    session: AsyncSession = Depends(db.get_db),
-    user_id: int = Depends(oauth2_scheme),
-):
-    service = UserService(session)
-    user_profile = await service.attach_uid(user_id=user_id, uid=uid)
-    if not user_profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user_profile
-
-
 @router.post("/login", response_model=AuthResponseModel)
 async def user_loggin_in(
     data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -87,3 +74,10 @@ async def user_loggin_in(
     token_payload = {"user_id": user["id"]}
     token = create_jwt_token(data=token_payload)
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/qr")
+async def get_qr(user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)):
+    service = UserService(session)
+    qr = service.qr_gen(user_id=user_id)
+    return Response(content=qr, media_type="image/svg+xml")
