@@ -5,7 +5,7 @@ from hema.auth import TrainerIdDep, UserIdDep
 from hema.db import SessionDep
 from hema.schemas.payments import (
     PaymentResponseSchema,
-    PaymentUpdateSchema,
+    PaymentSchema,
 )
 from hema.services.payment_service import PaymentService
 
@@ -29,13 +29,18 @@ async def get_user_balance(
 
 @router.post("/balance", response_model=PaymentResponseSchema)
 async def update_user_balance(
-    data: PaymentUpdateSchema,
+    data: PaymentSchema,
     session: SessionDep,
     trainer_id: UserIdDep,
 ):
     service = PaymentService(session)
     try:
-        update = await service.update_user_deposit(payment_data=data, trainer_id=trainer_id)
+        update = await service.add_deposit(
+            trainer_id=trainer_id,
+            user_id=data.user_id,
+            payment=data.payment,
+            comment=data.comment,
+        )
     except IntegrityError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only for trainer") from e
     return update

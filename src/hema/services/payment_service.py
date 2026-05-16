@@ -1,22 +1,31 @@
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hema.models import VisitModel, UserPaymentHistory, EventModel
-from hema.schemas.payments import PaymentUpdateSchema
+from hema.models import EventModel, UserPaymentHistory, VisitModel
+from hema.schemas.payments import PaymentSchema
 
 
 class PaymentService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def update_user_deposit(self, payment_data: PaymentUpdateSchema, trainer_id: int) -> dict:
-        updated_data = payment_data.model_dump(mode="json", exclude_unset=True)
-        updated_data["trainer_id"] = trainer_id
-        if not updated_data:
-            return await self.get_user_balance(updated_data["user_id"])
+    async def add_deposit(
+        self,
+        trainer_id: int,
+        user_id: int,
+        payment: int,
+        comment: str | None = None,
+    ) -> dict:
         q = (
             sa.insert(UserPaymentHistory)
-            .values(updated_data)
+            .values(
+                {
+                    UserPaymentHistory.user_id: user_id,
+                    UserPaymentHistory.payment: payment,
+                    UserPaymentHistory.comment: comment,
+                    UserPaymentHistory.trainer_id: trainer_id,
+                }
+            )
             .returning(*UserPaymentHistory.__table__.c)
         )
         return (await self.db.execute(q)).mappings().first()
@@ -34,19 +43,16 @@ class PaymentService:
         return (await self.db.scalar(q)) is not None
 
     async def get_user_balance(self, user_id: int) -> int:
-        payments_sum = (
-            sa.select(sa.func.sum(UserPaymentHistory.payment).label("total_payment"))
-            .where(UserPaymentHistory.user_id == user_id)
-            .subquery()
+        q = sa.select(sa.func.sum(UserPaymentHistory.payment)).where(
+            UserPaymentHistory.user_id == user_id
         )
-        debt_sum = (
-            sa.select(sa.func.sum(EventModel.price).label("total_debt"))
+        payments = await self.db.scalar(q)
+
+        q = (
+            sa.select(sa.func.sum(EventModel.price))
             .join(VisitModel, EventModel.id == VisitModel.event_id)
             .where(VisitModel.user_id == user_id)
-            .subquery()
         )
-        q = sa.select(payments_sum, debt_sum)
-        result = (await self.db.execute(q)).mappings().first()
-        debt = result.get("total_debt") or 0
-        payments = result.get("total_payment") or 0
-        return payments - debt
+        debt = await self.db.scalar(q)
+
+        return (payments or 0) - (debt or 0)
