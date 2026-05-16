@@ -20,6 +20,7 @@ class UserCreateSchema(BaseModel):
 
 
 class UserResponseSchema(BaseModel):
+    id: int
     username: str
     name: str | None = None
     gender: UserGender = Field(default=UserGender.OTHER)
