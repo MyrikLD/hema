@@ -17,6 +17,7 @@ class WeeklyEventBase(BaseModel):
     weekday: int = Field(ge=0, le=6)  # 0=Monday … 6=Sunday
     time_start: time
     time_end: time
+    price: int = Field(ge=0)
 
     @model_validator(mode="after")
     def validate_fields(cls, values):
@@ -42,6 +43,7 @@ class WeeklyEventUpdate(BaseModel):
     time_start: time | None = None
     time_end: time | None = None
     trainer_id: int | None = None
+    price: int | None = Field(None, ge=0)
 
 
 class WeeklyEventResponse(WeeklyEventBase):

@@ -23,6 +23,7 @@ class WeeklyEventService:
         time_end,
         start: date,
         end: date,
+        price: int,
         weekly_event_id: int,
         trainer_id: int,
     ) -> int:
@@ -47,6 +48,7 @@ class WeeklyEventService:
                         EventModel.time_end: time_end,
                         EventModel.weekly_id: weekly_event_id,
                         EventModel.trainer_id: trainer_id,
+                        EventModel.price: price,
                     }
                 )
             current_date += timedelta(days=1)
@@ -87,6 +89,7 @@ class WeeklyEventService:
                     WeeklyEventModel.weekday: data.weekday,
                     WeeklyEventModel.time_start: data.time_start,
                     WeeklyEventModel.time_end: data.time_end,
+                    WeeklyEventModel.price: data.price,
                     WeeklyEventModel.trainer_id: user_id,
                 }
             )
@@ -101,6 +104,7 @@ class WeeklyEventService:
             time_end=data.time_end,
             start=data.start,
             end=data.end,
+            price=data.price,
             trainer_id=user_id,
             weekly_event_id=weekly_event_id,  # type: ignore[arg-type]
         )
@@ -146,6 +150,7 @@ class WeeklyEventService:
                 start=we["start"],
                 end=we["end"],
                 trainer_id=we["trainer_id"],
+                price=we["price"],
                 weekly_event_id=weekly_event_id,
             )
         else:

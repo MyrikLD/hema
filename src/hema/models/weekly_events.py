@@ -17,3 +17,5 @@ class WeeklyEventModel(Base):
     time_start = sa.Column(sa.Time, nullable=False)
     time_end = sa.Column(sa.Time, nullable=False)
     trainer_id = sa.Column(sa.Integer, sa.ForeignKey("trainers.id", ondelete="SET NULL"))
+
+    price = sa.Column(sa.Integer, server_default="0", nullable=False)

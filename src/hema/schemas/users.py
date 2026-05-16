@@ -12,11 +12,9 @@ class UserGender(StrEnum):
 
 class UserCreateSchema(BaseModel):
     username: str
-    password: str
+    password: str = Field(min_length=6)
     gender: UserGender = UserGender.OTHER
     phone: str | None = None
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class UserResponseSchema(BaseModel):
@@ -34,9 +32,7 @@ class UserProfileUpdateShema(BaseModel):
     name: str | None = None
     phone: str | None = None
     gender: UserGender | None = None
-    password: str | None = None
-
-    model_config = ConfigDict(extra="forbid")
+    password: str | None = Field(None, min_length=6)
 
 
 class UserProfileUpdateResponseShema(UserProfileUpdateShema):
