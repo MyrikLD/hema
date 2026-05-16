@@ -42,7 +42,7 @@ export default function EventDetailSheet({ event, open, onClose, onOpen }: Event
 
   if (!event) return null;
 
-  const isTrainer = user != null && user.id === event.trainer_id;
+  const isTrainer = user?.is_trainer ?? false;
 
   return (
     <SwipeableDrawer
