@@ -39,7 +39,6 @@ export interface IntentionWithUser {
 
 export interface Visit {
   timestamp: string;
-  uid: string;
   user_id: number | null;
   event_id: number | null;
   event_name: string | null;
