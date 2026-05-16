@@ -31,6 +31,7 @@ class VisitService:
     async def mark_visit(self, data: VisitMarkPostSchema, trainer_id: int) -> dict:
         q = (
             sa.select(
+                EventModel.trainer_id,
                 EventModel.name.label("event_name"),
                 UserModel.username,
             )
@@ -40,6 +41,8 @@ class VisitService:
         )
         row = (await self.db.execute(q)).mappings().first()
         if not row:
+            raise NotATrainerError()
+        if row["trainer_id"] != trainer_id:
             raise NotATrainerError()
         q_insert = (
             sa.insert(VisitModel)
