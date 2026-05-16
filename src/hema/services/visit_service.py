@@ -14,7 +14,6 @@ class VisitService:
         q = (
             sa.select(
                 VisitModel.timestamp,
-                VisitModel.uid,
                 VisitModel.user_id,
                 VisitModel.event_id,
                 EventModel.name.label("event_name"),
@@ -46,7 +45,7 @@ class VisitService:
             raise NotATrainerError()
         q_insert = (
             sa.insert(VisitModel)
-            .values(user_id=data.user_id, event_id=data.event_id, uid=str(data.user_id))
+            .values(user_id=data.user_id, event_id=data.event_id)
             .returning(VisitModel.timestamp)
         )
         try:

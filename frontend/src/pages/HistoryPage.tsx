@@ -70,7 +70,7 @@ export default function HistoryPage() {
 
         <List>
           {visits.map((v, i) => (
-            <ListItem key={`${v.timestamp}-${v.uid}-${i}`} divider>
+            <ListItem key={`${v.timestamp}-${i}`} divider>
               <ListItemText
                 primary={v.event_name || 'Unknown event'}
                 secondary={formatDate(v.timestamp)}
