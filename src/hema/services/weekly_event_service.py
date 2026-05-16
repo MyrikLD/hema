@@ -27,9 +27,11 @@ class WeeklyEventService:
         trainer_id: int,
     ) -> int:
         existing = set(
-            (await self.db.scalars(
-                sa.select(EventModel.date).where(EventModel.weekly_id == weekly_event_id)
-            )).all()
+            (
+                await self.db.scalars(
+                    sa.select(EventModel.date).where(EventModel.weekly_id == weekly_event_id)
+                )
+            ).all()
         )
 
         items = []
@@ -105,7 +107,9 @@ class WeeklyEventService:
 
         return await self.get_weekly_event(weekly_event_id)  # type: ignore[arg-type]
 
-    async def update_weekly_event(self, weekly_event_id: int, data: WeeklyEventUpdate) -> dict | None:
+    async def update_weekly_event(
+        self, weekly_event_id: int, data: WeeklyEventUpdate
+    ) -> dict | None:
         q = sa.select(*WeeklyEventModel.__table__.c).where(WeeklyEventModel.id == weekly_event_id)
         weekly_event = (await self.db.execute(q)).mappings().fetchone()
 
@@ -185,7 +189,9 @@ class WeeklyEventService:
     async def list_weekly_events(
         self, start: date | None = None, end: date | None = None
     ) -> list[WeeklyEventModel]:
-        q = sa.select(WeeklyEventModel).order_by(WeeklyEventModel.weekday, WeeklyEventModel.time_start)
+        q = sa.select(WeeklyEventModel).order_by(
+            WeeklyEventModel.weekday, WeeklyEventModel.time_start
+        )
         if start is not None:
             q = q.where(WeeklyEventModel.end >= start)
         if end is not None:
