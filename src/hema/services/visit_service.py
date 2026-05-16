@@ -44,7 +44,8 @@ class VisitService:
         )
         try:
             timestamp = await self.db.scalar(q_insert)
-        except IntegrityError:
+        except IntegrityError as e:
+            print(f"IntegrityError: {e.orig}")
             return {"status": "already_marked", "username": username}
         return {
             "status": "marked",

@@ -15,6 +15,7 @@ import { updateProfile } from '../api/auth';
 
 export default function ProfilePage() {
   const { user, token, logout, refreshUser } = useAuth();
+  const [username, setUsername] = useState(user?.username || '');
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [gender, setGender] = useState<string>(user?.gender || 'o');
@@ -49,6 +50,7 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const data: Record<string, string> = {};
+      if (username !== user?.username) data.username = username;
       if (name !== user?.name) data.name = name;
       if (phone !== (user?.phone || '')) data.phone = phone;
       if (gender !== user?.gender) data.gender = gender;
@@ -91,6 +93,13 @@ export default function ProfilePage() {
           )}
 
           <Box component="form" onSubmit={handleSave}>
+            <TextField
+              label="Username"
+              fullWidth
+              margin="normal"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
             <TextField
               label="Name"
               fullWidth

@@ -111,7 +111,7 @@ export default function EventDetailSheet({ event, open, onClose, onOpen }: Event
             navigate(`/scanner?event_id=${event.id}`);
           }}
         >
-          Сканировать
+          Scan
         </Button>
       )}
 
