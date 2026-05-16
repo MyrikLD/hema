@@ -3,7 +3,7 @@ from hema.exceptions import AlreadyMarkedError, NotATrainerError
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from hema.models import EventModel, VisitModel, UserModel
-from hema.schemas.visits import VisitMarkPostSchema, VisitMarkResponseSchema
+from hema.schemas.visits import VisitMarkPostSchema
 
 
 class VisitService:

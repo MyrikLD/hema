@@ -16,7 +16,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --dev
       - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
-      - run: black --check .
+      - run: ruff check .
+      - run: ruff format --check .
 
   migrations:
     name: Migration check
@@ -43,8 +44,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --dev
       - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
-      - run: alembic upgrade head
-      - run: alembic-autogen-check
+      - run: PYTHONPATH=src alembic upgrade head
+      - run: PYTHONPATH=src alembic-autogen-check
 
   docker:
     name: Build & push Docker image
