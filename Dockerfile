@@ -6,18 +6,8 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# Stage 2: Runtime base
-FROM python:3.12-slim AS runtime-base
-ENV LC_CTYPE=C.utf8
-ENV PATH="/venv/bin:$PATH"
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Stage 3: Build Python env
-FROM runtime-base AS builder
+# Stage 2: Build Python env
+FROM python:3.12-slim AS builder
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_PROJECT_ENVIRONMENT=/venv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -28,8 +18,8 @@ COPY src src
 COPY README.md .
 RUN uv sync --no-dev --locked --no-editable --python python3.12 --python-preference only-system
 
-# Stage 4: Runtime
-FROM runtime-base AS api
+# Stage 3: Runtime
+FROM python:3.12-slim
 ARG UID=10001
 RUN useradd \
     --create-home \
@@ -38,6 +28,7 @@ RUN useradd \
     --uid "${UID}" \
     app
 
+ENV PATH="/venv/bin:$PATH"
 ENV ROOT=/app
 ENV DOCKER=1
 

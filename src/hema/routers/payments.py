@@ -41,10 +41,11 @@ async def update_user_balance(
     return update
 
 
-@router.delete("/payment/{payment_id}", response_model=int, dependencies=[TrainerIdDep])
+@router.delete("/payment/{payment_id}", response_model=int)
 async def delete_user_payment(
     payment_id: int,
     session: SessionDep,
+    _: TrainerIdDep,
 ) -> int | None:
     service = PaymentService(session)
     try:

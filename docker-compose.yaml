@@ -15,7 +15,7 @@ services:
       interval: 5s
       timeout: 1s
       retries: 5
-      start_period: 5s
+      start_period: 1s
 
   api:
     image: ghcr.io/myrikld/hema:latest
