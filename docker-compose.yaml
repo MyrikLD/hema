@@ -8,12 +8,14 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - ./data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "postgres", "-U", "postgres"]
-      interval: 10s
-      timeout: 5s
+      test: [ "CMD", "pg_isready", "-d", "postgres", "-U", "postgres" ]
+      interval: 5s
+      timeout: 1s
       retries: 5
-      start_period: 30s
+      start_period: 5s
 
   api:
     image: ghcr.io/myrikld/hema:latest
@@ -30,7 +32,7 @@ services:
         restart: true
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
       interval: 30s
       timeout: 5s
       retries: 3
