@@ -31,7 +31,7 @@ class UserService:
 
     async def get_by_id(self, user_id: int) -> dict | None:
         q = (
-            sa.select(*UserModel.__table__.c, (TrainerModel.id != None).label("is_trainer"))
+            sa.select(*UserModel.__table__.c, TrainerModel.id.isnot(None).label("is_trainer"))
             .outerjoin(TrainerModel, TrainerModel.id == UserModel.id)
             .where(UserModel.id == user_id)
         )
