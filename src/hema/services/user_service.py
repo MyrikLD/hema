@@ -6,6 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from hema.auth import password_hashing
 from hema.models import UserModel
+from hema.models.trainers import TrainerModel
 from hema.schemas.users import UserCreateSchema, UserProfileUpdateShema
 
 
@@ -29,7 +30,11 @@ class UserService:
         return (await self.db.execute(q)).mappings().first()
 
     async def get_by_id(self, user_id: int) -> dict | None:
-        q = sa.select(*UserModel.__table__.c).where(UserModel.id == user_id)
+        q = (
+            sa.select(*UserModel.__table__.c, (TrainerModel.id != None).label("is_trainer"))
+            .outerjoin(TrainerModel, TrainerModel.id == UserModel.id)
+            .where(UserModel.id == user_id)
+        )
         return (await self.db.execute(q)).mappings().first()
 
     async def get_by_username(self, username: str) -> dict | None:

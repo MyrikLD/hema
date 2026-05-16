@@ -3,6 +3,7 @@ export interface User {
   name: string | null;
   gender: 'm' | 'f' | 'o';
   phone: string | null;
+  is_trainer: boolean;
 }
 
 export interface AuthResponse {

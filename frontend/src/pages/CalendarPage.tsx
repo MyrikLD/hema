@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, CalendarMonth, Add } from '@mui/icons-materi
 import type { Event } from '../types';
 import { get } from '../api/client';
 import { exportEvents } from '../utils/ics';
+import { useAuth } from '../contexts/AuthContext';
 import CalendarGrid from '../components/CalendarGrid';
 import EventDetailSheet from '../components/EventDetailSheet';
 import CreateEventDialog from '../components/CreateEventDialog';
@@ -46,6 +47,7 @@ export default function CalendarPage() {
   const mondayStr = toISODate(monday);
   const sundayStr = toISODate(addDays(monday, 6));
 
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -86,11 +88,13 @@ export default function CalendarPage() {
           {formatWeekTitle(monday)}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Tooltip title="New event">
-            <IconButton size="small" onClick={() => setCreateOpen(true)}>
-              <Add fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {user?.is_trainer && (
+            <Tooltip title="New event">
+              <IconButton size="small" onClick={() => setCreateOpen(true)}>
+                <Add fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title="Экспорт недели (.ics)">
             <span>
               <IconButton
