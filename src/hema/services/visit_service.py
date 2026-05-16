@@ -1,4 +1,3 @@
-from sqlalchemy.exc import IntegrityError
 from hema.exceptions import AlreadyMarkedError, NotATrainerError
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,15 +42,22 @@ class VisitService:
             raise NotATrainerError()
         if row["trainer_id"] != trainer_id:
             raise NotATrainerError()
+
+        existing = await self.db.scalar(
+            sa.select(VisitModel.id).where(
+                VisitModel.user_id == data.user_id,
+                VisitModel.event_id == data.event_id,
+            )
+        )
+        if existing:
+            raise AlreadyMarkedError(username=row["username"])
+
         q_insert = (
             sa.insert(VisitModel)
             .values(user_id=data.user_id, event_id=data.event_id)
             .returning(VisitModel.timestamp)
         )
-        try:
-            timestamp = await self.db.scalar(q_insert)
-        except IntegrityError:
-            raise AlreadyMarkedError(username=row["username"])
+        timestamp = await self.db.scalar(q_insert)
         return {
             "status": "marked",
             "timestamp": timestamp,
