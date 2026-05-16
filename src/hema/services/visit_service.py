@@ -3,7 +3,6 @@ from hema.exceptions import AlreadyMarkedError, NotATrainerError
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from hema.models import EventModel, VisitModel, UserModel
-from hema.models.trainers import TrainerModel
 from hema.schemas.visits import VisitMarkPostSchema
 
 
@@ -30,11 +29,6 @@ class VisitService:
         return list((await self.db.execute(q)).mappings().all())
 
     async def mark_visit(self, data: VisitMarkPostSchema, trainer_id: int) -> dict:
-        is_trainer = await self.db.scalar(
-            sa.select(TrainerModel.id).where(TrainerModel.id == trainer_id)
-        )
-        if not is_trainer:
-            raise NotATrainerError()
         q = (
             sa.select(
                 EventModel.name.label("event_name"),
