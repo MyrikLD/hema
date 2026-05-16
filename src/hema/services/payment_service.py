@@ -2,7 +2,6 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hema.models import EventModel, UserPaymentHistory, VisitModel
-from hema.schemas.payments import PaymentSchema
 
 
 class PaymentService:
