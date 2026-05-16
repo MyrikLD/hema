@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from hema.exceptions import NotATrainerError, AlreadyMarkedError
 from hema.auth import oauth2_scheme
 from hema.db import db
 from hema.schemas.visits import VisitResponse, VisitMarkPostSchema, VisitMarkResponseSchema
@@ -27,7 +27,9 @@ async def post_visit(
     trainer_id: int = Depends(oauth2_scheme),
 ) -> dict:
     visit_service = VisitService(session)
-    visit_data = await visit_service.mark_visit(data=data, trainer_id=trainer_id)
-    if visit_data["status"] == "forbidden":
+    try:
+        return await visit_service.mark_visit(data=data, trainer_id=trainer_id)
+    except NotATrainerError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your event")
-    return visit_data
+    except AlreadyMarkedError as e:
+        return {"status": "already_marked", "username": e.username}

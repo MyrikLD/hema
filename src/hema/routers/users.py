@@ -92,5 +92,5 @@ async def user_loggin_in(
 @router.get("/qr")
 async def get_qr(user_id: int = Depends(oauth2_scheme), session: AsyncSession = Depends(db.get_db)):
     service = UserService(session)
-    qr = await service.qr_gen(user_id=user_id)
+    qr = service.qr_gen(user_id=user_id)
     return Response(content=qr, media_type="image/svg+xml")

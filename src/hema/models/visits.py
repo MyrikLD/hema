@@ -13,5 +13,5 @@ class VisitModel(Base):
 
     __table_args__ = (
         sa.PrimaryKeyConstraint("timestamp", "uid"),
-        sa.UniqueConstraint("user_id", "event_id", name="unique_user_on_event_constraint"),
+        sa.UniqueConstraint("user_id", "event_id"),
     )

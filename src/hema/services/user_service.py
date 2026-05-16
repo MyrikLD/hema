@@ -73,7 +73,7 @@ class UserService:
 
         return r
 
-    async def qr_gen(self, user_id: int) -> bytes:
+    def qr_gen(self, user_id: int) -> bytes:
         factory = qrcode.image.svg.SvgPathImage
         image = qrcode.make(f"http://localhost:8000/students/{user_id}", image_factory=factory)
         buffer = BytesIO()
