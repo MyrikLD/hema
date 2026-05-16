@@ -1,6 +1,8 @@
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hema.exceptions import AlreadyExists
 from hema.models import EventModel, VisitModel
 
 
@@ -34,4 +36,7 @@ class VisitService:
             }
         )
 
-        await self.db.execute(q)
+        try:
+            await self.db.execute(q)
+        except IntegrityError:
+            raise AlreadyExists()

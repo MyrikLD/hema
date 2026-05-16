@@ -3,13 +3,14 @@ from os import environ
 
 import sentry_sdk
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from hema.config import settings
 from hema.db import db
+from hema.exceptions import AlreadyExists
 from hema.routers import api_router
 from hema.services.weekly_event_service import WeeklyEventService
 
@@ -74,6 +75,11 @@ async def spa_fallback(path: str):
     if index.exists():
         return FileResponse(str(index))
     return {"detail": "Frontend not built. Run: cd frontend && npm run build"}
+
+
+@api.exception_handler(AlreadyExists)
+def handle_already_exists(request, exc):
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
 
 
 if __name__ == "__main__":
