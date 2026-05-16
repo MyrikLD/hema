@@ -24,6 +24,7 @@ class UserResponseSchema(BaseModel):
     name: str | None = None
     gender: UserGender = Field(default=UserGender.OTHER)
     phone: str | None = None
+    is_trainer: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
