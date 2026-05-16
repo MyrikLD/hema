@@ -72,6 +72,7 @@ class WeeklyEventService:
                 time_end=we.time_end,
                 start=we.start,
                 end=we.end,
+                price=we.price,
                 weekly_event_id=we.id,
                 trainer_id=we.trainer_id,
             )
