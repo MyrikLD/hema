@@ -20,7 +20,7 @@ async def get_my_visits(
     return await service.get_user_visits(user_id, limit, offset)
 
 
-@router.post("/qr_visit", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("", status_code=status.HTTP_204_NO_CONTENT)
 async def post_visit(
     data: VisitMarkPostSchema,
     session: SessionDep,

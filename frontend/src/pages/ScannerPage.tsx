@@ -117,7 +117,7 @@ export default function ScannerPage() {
         }
 
         try {
-          await post<void>('/visits/qr_visit', { user_id: userId, event_id: eventId });
+          await post<void>('/visits', { user_id: userId, event_id: eventId });
           const user = await get<{ name: string | null; username: string }>(`/users/${userId}`);
           showNotif('success', [user.name || user.username, 'Checked in']);
         } catch (err) {
