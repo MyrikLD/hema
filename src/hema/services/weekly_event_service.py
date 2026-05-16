@@ -14,68 +14,70 @@ class WeeklyEventService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def generate_events(
-        self,
-        name: str,
-        color: str,
-        weekday: int,
-        time_start,
-        time_end,
-        start: date,
-        end: date,
-        price: int,
-        weekly_event_id: int,
-        trainer_id: int,
-    ) -> int:
+    async def generate_events(self, weekly_event_id: int) -> int:
+        q = sa.select(WeeklyEventModel.start, WeeklyEventModel.end, WeeklyEventModel.weekday).where(
+            WeeklyEventModel.id == weekly_event_id
+        )
+        start, end, weekday = (await self.db.execute(q)).fetchone()
+
         existing = set(
-            (
-                await self.db.scalars(
-                    sa.select(EventModel.date).where(EventModel.weekly_id == weekly_event_id)
-                )
-            ).all()
+            await self.db.scalars(
+                sa.select(EventModel.date).where(EventModel.weekly_id == weekly_event_id)
+            )
         )
 
-        items = []
-        current_date = start
-        while current_date <= end:
-            if current_date.weekday() == weekday and current_date not in existing:
-                items.append(
-                    {
-                        EventModel.name: name,
-                        EventModel.color: color,
-                        EventModel.date: current_date,
-                        EventModel.time_start: time_start,
-                        EventModel.time_end: time_end,
-                        EventModel.weekly_id: weekly_event_id,
-                        EventModel.trainer_id: trainer_id,
-                        EventModel.price: price,
-                    }
-                )
-            current_date += timedelta(days=1)
+        dates = []
+        current = max(start, date.today())
+        while current <= end:
+            if current.weekday() == weekday and current not in existing:
+                dates.append((current,))
+            current += timedelta(days=1)
 
-        if items:
-            await self.db.execute(sa.insert(EventModel).values(items))
+        if not dates:
+            return 0
 
-        return len(items)
+        dates_tbl = sa.values(sa.column("d", sa.Date), name="dates").data(dates)
+
+        sel = (
+            sa.select(
+                WeeklyEventModel.name,
+                WeeklyEventModel.color,
+                dates_tbl.c.d.label("date"),
+                WeeklyEventModel.time_start,
+                WeeklyEventModel.time_end,
+                sa.literal(weekly_event_id).label("weekly_id"),
+                WeeklyEventModel.trainer_id,
+                WeeklyEventModel.price,
+            )
+            .select_from(dates_tbl)
+            .join(WeeklyEventModel, WeeklyEventModel.id == weekly_event_id)
+        )
+
+        result = await self.db.execute(
+            sa.insert(EventModel).from_select(
+                [
+                    "name",
+                    "color",
+                    "date",
+                    "time_start",
+                    "time_end",
+                    "weekly_id",
+                    "trainer_id",
+                    "price",
+                ],
+                sel,
+            )
+        )
+        return result.rowcount
 
     async def sync_future_events(self) -> int:
         """Generate missing future events for all active weekly events. Safe to call on startup."""
-        q = sa.select(WeeklyEventModel).where(WeeklyEventModel.end >= datetime.now().date())
-        weekly_events = (await self.db.execute(q)).scalars().all()
+        ids = await self.db.scalars(
+            sa.select(WeeklyEventModel.id).where(WeeklyEventModel.end >= datetime.now().date())
+        )
         total = 0
-        for we in weekly_events:
-            total += await self.generate_events(
-                name=we.name,
-                color=we.color,
-                weekday=we.weekday,
-                time_start=we.time_start,
-                time_end=we.time_end,
-                start=we.start,
-                end=we.end,
-                price=we.price,
-                weekly_event_id=we.id,
-                trainer_id=we.trainer_id,
-            )
+        for weekly_event_id in ids.all():
+            total += await self.generate_events(weekly_event_id)
         return total
 
     async def create_weekly_event(self, data: WeeklyEventCreate, user_id: int) -> dict:
@@ -97,18 +99,7 @@ class WeeklyEventService:
             .returning(WeeklyEventModel.id)
         )
 
-        await self.generate_events(
-            name=data.name,
-            color=data.color,
-            weekday=data.weekday,
-            time_start=data.time_start,
-            time_end=data.time_end,
-            start=data.start,
-            end=data.end,
-            price=data.price,
-            trainer_id=user_id,
-            weekly_event_id=weekly_event_id,  # type: ignore[arg-type]
-        )
+        await self.generate_events(weekly_event_id)  # type: ignore[arg-type]
 
         return await self.get_weekly_event(weekly_event_id)  # type: ignore[arg-type]
 
@@ -141,19 +132,7 @@ class WeeklyEventService:
                     EventModel.date > today,
                 )
             )
-            we = {**weekly_event, **_data}
-            await self.generate_events(
-                name=we["name"],
-                color=we["color"],
-                weekday=we["weekday"],
-                time_start=we["time_start"],
-                time_end=we["time_end"],
-                start=we["start"],
-                end=we["end"],
-                trainer_id=we["trainer_id"],
-                price=we["price"],
-                weekly_event_id=weekly_event_id,
-            )
+            await self.generate_events(weekly_event_id)
         else:
             we = {**weekly_event, **_data}
             await self.db.execute(
