@@ -1,53 +1,35 @@
-# syntax=docker/dockerfile:1.9
+# Stage 1: Build frontend
+FROM node:22-slim AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
 
-# Stage 1: Runtime base (minimal)
-FROM --platform=${TARGETPLATFORM} debian:stable-slim AS runtime-base
-# Assure UTF-8 encoding is used.
+# Stage 2: Runtime base
+FROM python:3.12-slim AS runtime-base
 ENV LC_CTYPE=C.utf8
-# Location of the virtual environment
-ENV UV_PROJECT_ENVIRONMENT="/venv"
-# Location of the python installation via uv
-ENV UV_PYTHON_INSTALL_DIR="/python"
-# Tweaking the PATH variable for easier use
-ENV PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
-# Install only runtime dependencies
+ENV PATH="/venv/bin:$PATH"
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y tzdata ca-certificates && \
+    apt-get install --no-install-recommends -y ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Stage 2: Build application
+# Stage 3: Build Python env
 FROM runtime-base AS builder
-# Byte compile the python files on installation
 ENV UV_COMPILE_BYTECODE=1
-# Python version to use
-ENV UV_PYTHON=python3.12
-
-# Install build dependencies
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential gettext git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
+ENV UV_PROJECT_ENVIRONMENT=/venv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
-# Copy dependency files first for better caching
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-
-# Install dependencies (cached layer)
-RUN uv sync --no-dev --locked --no-install-project
-
-# Copy application code and install project
+RUN uv sync --no-dev --locked --no-install-project --python python3.12 --python-preference only-system
 COPY src src
 COPY README.md .
-RUN uv pip install --no-deps .
+RUN uv sync --no-dev --locked --no-editable --python python3.12 --python-preference only-system
 
-# Stage 3: Runtime
+# Stage 4: Runtime
 FROM runtime-base AS api
-# Create non-privileged user
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
 ARG UID=10001
 RUN useradd \
     --create-home \
@@ -56,13 +38,19 @@ RUN useradd \
     --uid "${UID}" \
     app
 
-STOPSIGNAL SIGINT
+ENV ROOT=/app
 
-# Copy Python and virtual env from builder
-COPY --from=builder $UV_PYTHON_INSTALL_DIR $UV_PYTHON_INSTALL_DIR
-COPY --from=builder $UV_PROJECT_ENVIRONMENT $UV_PROJECT_ENVIRONMENT
-COPY static/ /app/static
+COPY --from=builder /venv /venv
+COPY static/ /app/static/
+COPY --from=frontend-builder /frontend/dist/ /app/frontend/dist/
+COPY migrations/ /app/migrations/
+COPY alembic.ini /app/alembic.ini
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 USER app
 WORKDIR /app
 EXPOSE 8000
+STOPSIGNAL SIGINT
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
