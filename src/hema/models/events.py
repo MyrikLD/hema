@@ -17,7 +17,7 @@ class EventModel(Base):
 
     weekly_id = sa.Column(
         sa.Integer,
-        sa.ForeignKey("weekly_events.id", ondelete="CASCADE"),
+        sa.ForeignKey("weekly_events.id", ondelete="SET NULL"),
         nullable=True,
     )
     trainer_id = sa.Column(sa.Integer, sa.ForeignKey("trainers.id", ondelete="SET NULL"))

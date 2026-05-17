@@ -106,48 +106,38 @@ class WeeklyEventService:
     async def update_weekly_event(
         self, weekly_event_id: int, data: WeeklyEventUpdate
     ) -> dict | None:
-        q = sa.select(*WeeklyEventModel.__table__.c).where(WeeklyEventModel.id == weekly_event_id)
-        weekly_event = (await self.db.execute(q)).mappings().fetchone()
-
-        if not weekly_event:
-            return None
+        curr_weekday = await self.db.scalar(
+            sa.select(WeeklyEventModel.weekday).where(WeeklyEventModel.id == weekly_event_id)
+        )
 
         _data = data.model_dump(exclude_unset=True)
-
-        schedule_changed = any(
-            _data.get(f) is not None and _data[f] != weekly_event[f]
-            for f in ("start", "end", "weekday")
-        )
 
         await self.db.execute(
             sa.update(WeeklyEventModel).where(WeeklyEventModel.id == weekly_event_id).values(_data)
         )
 
-        today = datetime.now().date()
+        today = date.today()
 
-        if schedule_changed:
+        if _data.get("weekday") is not None and curr_weekday != _data["weekday"]:
             await self.db.execute(
                 sa.delete(EventModel).where(
-                    EventModel.weekly_id == weekly_event_id,
-                    EventModel.date > today,
+                    EventModel.weekly_id == weekly_event_id, EventModel.date > today
                 )
             )
             await self.generate_events(weekly_event_id)
         else:
-            we = {**weekly_event, **_data}
+            we_tbl = WeeklyEventModel.__table__.c
             await self.db.execute(
                 sa.update(EventModel)
-                .where(
-                    EventModel.weekly_id == weekly_event_id,
-                    EventModel.date > today,
-                )
                 .values(
-                    name=we["name"],
-                    color=we["color"],
-                    trainer_id=we["trainer_id"],
-                    time_start=we["time_start"],
-                    time_end=we["time_end"],
+                    name=we_tbl.name,
+                    color=we_tbl.color,
+                    trainer_id=we_tbl.trainer_id,
+                    time_start=we_tbl.time_start,
+                    time_end=we_tbl.time_end,
                 )
+                .where(EventModel.weekly_id == weekly_event_id, EventModel.date > today)
+                .where(we_tbl.id == weekly_event_id)
             )
 
         return await self.get_weekly_event(weekly_event_id)
