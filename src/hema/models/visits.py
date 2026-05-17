@@ -6,10 +6,12 @@ from .base import Base
 class VisitModel(Base):
     __tablename__ = "visits"
 
-    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    event_id = sa.Column(sa.Integer, sa.ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    event_id = sa.Column(
+        sa.Integer, sa.ForeignKey("events.id", ondelete="RESTRICT"), nullable=False
+    )
     trainer_id = sa.Column(
-        sa.Integer, sa.ForeignKey("trainers.id", ondelete="CASCADE"), nullable=False
+        sa.Integer, sa.ForeignKey("trainers.id", ondelete="RESTRICT"), nullable=False
     )
     timestamp = sa.Column(sa.DateTime, nullable=False, server_default=sa.text("now()"))
 
